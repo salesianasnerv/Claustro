@@ -1,0 +1,103 @@
+/* Paleta corporativa (igual que el resto de webs del colegio) */
+:root {
+  --azul: #009abb; --azul-oscuro: #007791;
+  --verde: #b4be00; --verde-oscuro: #6b7200;
+  --naranja: #ee712a;
+
+  --bg: #F8FAFC; --panel: #FFFFFF; --texto: #1E293B; --suave: #64748B; --borde: #E2E8F0;
+  --azul-bg: rgba(0, 154, 187, .11); --verde-bg: rgba(180, 190, 0, .16);
+  --radio: 14px;
+  --sombra: 0 10px 25px -5px rgba(0, 154, 187, .10), 0 8px 10px -6px rgba(0, 0, 0, .04);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1720; --panel: #17212C; --texto: #E7ECF2; --suave: #93A2B3; --borde: #263340;
+    --azul: #29b6d4; --verde-oscuro: #cdd640;
+    --azul-bg: rgba(41, 182, 212, .14); --verde-bg: rgba(180, 190, 0, .15);
+    --sombra: 0 10px 25px -8px rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1720; --panel: #17212C; --texto: #E7ECF2; --suave: #93A2B3; --borde: #263340;
+  --azul: #29b6d4; --verde-oscuro: #cdd640;
+  --azul-bg: rgba(41, 182, 212, .14); --verde-bg: rgba(180, 190, 0, .15);
+  --sombra: 0 10px 25px -8px rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--texto);
+  font: 15px/1.5 "Fira Sans", system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+button, input { font: inherit; }
+[hidden] { display: none !important; }
+
+/* Cabecera */
+.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center;
+  padding: 10px 16px; background: var(--panel); border-bottom: 2px solid #009abb; }
+.marca { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.marca .logo { height: 40px; width: auto; display: block; flex: none; }
+.marca span { font-weight: 700; font-size: 18px; color: var(--azul); padding-left: 14px; border-left: 1px solid var(--borde);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; flex: 1; }
+
+/* Portada */
+.portada { padding: 44px 0 28px; }
+.eyebrow { display: inline-block; background: var(--azul-bg); color: var(--azul); font-weight: 700; font-size: .78rem;
+  letter-spacing: .06em; text-transform: uppercase; padding: .3rem .8rem; border-radius: 999px; margin-bottom: .9rem; }
+.portada h1 { font-size: clamp(1.8rem, 4vw, 2.5rem); line-height: 1.15; color: var(--azul); margin: 0 0 .5rem; text-wrap: balance; }
+.portada p { color: var(--suave); margin: 0 0 1.4rem; max-width: 60ch; }
+.buscar { display: flex; align-items: center; gap: 10px; max-width: 420px; background: var(--panel);
+  border: 1px solid var(--borde); border-radius: 999px; padding: 0 16px; color: var(--suave); }
+.buscar:focus-within { border-color: var(--azul); box-shadow: 0 0 0 3px var(--azul-bg); }
+.buscar input { border: 0; outline: 0; background: none; color: var(--texto); padding: 11px 0; width: 100%; }
+
+/* Apartados */
+.apartado { margin-top: 28px; }
+.apartado h2 { display: flex; align-items: center; gap: 10px; font-size: 1.35rem; margin: 0; }
+.marca-ap { width: 6px; height: 22px; border-radius: 3px; }
+.marca-ap.general { background: var(--naranja); }
+.marca-ap.etapa { background: var(--verde); }
+.sub { color: var(--suave); margin: 4px 0 16px; }
+.etapa + .etapa { margin-top: 24px; }
+.etapa h3 { font-size: .82rem; text-transform: uppercase; letter-spacing: .07em; color: var(--suave); margin: 0 0 10px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.chips button { border: 1px solid var(--borde); background: var(--panel); color: var(--suave); border-radius: 999px;
+  padding: 6px 14px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.chips button:hover { color: var(--azul); border-color: var(--azul); }
+.chips button.activa { background: var(--azul-bg); color: var(--azul); border-color: transparent; }
+
+/* Tarjetas */
+.rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.util { position: relative; display: flex; gap: 14px; align-items: flex-start; padding: 18px 44px 18px 18px;
+  background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); color: inherit; text-decoration: none;
+  transition: border-color .15s, box-shadow .15s, transform .15s; }
+.util:hover { border-color: var(--azul); box-shadow: var(--sombra); transform: translateY(-2px); }
+.util:focus-visible { outline: 3px solid var(--azul-bg); border-color: var(--azul); }
+.ico { flex: none; width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; }
+.ico svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.util.tono-general .ico { background: rgba(238, 113, 42, .13); color: var(--naranja); }
+.util.tono-etapa .ico { background: var(--verde-bg); color: var(--verde-oscuro); }
+.cuerpo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.titulo { font-weight: 700; font-size: 1.05rem; }
+.etq { display: inline-block; vertical-align: 2px; margin-left: 4px; font-size: .7rem; font-weight: 600; color: var(--azul);
+  background: var(--azul-bg); padding: 1px 8px; border-radius: 999px; }
+.desc { color: var(--suave); font-size: .92rem; }
+.host { color: var(--suave); opacity: .75; font-size: .78rem; margin-top: 4px; overflow-wrap: anywhere; }
+.flecha { position: absolute; top: 18px; right: 16px; width: 18px; height: 18px; fill: none; stroke: var(--suave);
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s, transform .15s; }
+.util:hover .flecha { stroke: var(--azul); transform: translate(2px, -2px); }
+
+.vacio { color: var(--suave); text-align: center; padding: 40px 0; }
+.pie { text-align: center; color: var(--suave); font-size: 13px; padding: 20px 16px; border-top: 1px solid var(--borde); }
+
+@media (max-width: 520px) {
+  .marca .logo { height: 32px; }
+  .marca span { font-size: 15px; padding-left: 10px; }
+  .portada { padding-top: 28px; }
+  .rejilla { grid-template-columns: 1fr; }
+}
