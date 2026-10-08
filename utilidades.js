@@ -9,6 +9,7 @@
   - icono:       uno de estos: pastoral, wc, calendario, documento, personas,
                  reloj, libro, grafica, enlace.
   - etiqueta:    (opcional) texto pequeño, p. ej. "Nuevo".
+                 Para poner varias: ["ESO", "Bachillerato"].
 
   Las ETAPAS aparecen en el orden en que están escritas. Para crear una etapa
   nueva (p. ej. Infantil o Primaria), copia un bloque de etapa completo.
@@ -24,6 +25,12 @@ window.PORTAL = {
       url: "https://pastoral-claustro.vercel.app/",
       icono: "pastoral",
     },
+    {
+      titulo: "Biblioteca",
+      descripcion: "Catálogo, reservas y préstamos de libros de la biblioteca del colegio.",
+      url: "https://biblioteca-nervion.vercel.app/",
+      icono: "libro",
+    },
   ],
 
   etapas: [
@@ -35,6 +42,7 @@ window.PORTAL = {
           descripcion: "Registro de las salidas al baño del alumnado e informes por clase, franjas horarias o alumno/a.",
           url: "https://control-wc.vercel.app/",
           icono: "wc",
+          etiqueta: ["ESO", "Bachillerato"],
         },
         {
           titulo: "Calendario de exámenes",

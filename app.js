@@ -21,11 +21,14 @@
 
   function tarjeta(u, tono) {
     const host = (() => { try { return new URL(u.url).host; } catch { return ""; } })();
+    // etiqueta puede ser un texto ("Bachillerato") o una lista (["ESO", "Bachillerato"])
+    const etqs = [].concat(u.etiqueta || []);
     return `<a class="util tono-${tono}" href="${esc(u.url)}" target="_blank" rel="noopener"
-        data-texto="${esc(norm(u.titulo + " " + u.descripcion + " " + (u.etiqueta || "")))}">
+        data-texto="${esc(norm(u.titulo + " " + u.descripcion + " " + etqs.join(" ")))}">
       <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONOS[u.icono] || ICONOS.enlace}</svg></span>
       <span class="cuerpo">
-        <span class="titulo">${esc(u.titulo)}${u.etiqueta ? ` <span class="etq">${esc(u.etiqueta)}</span>` : ""}</span>
+        <span class="titulo">${esc(u.titulo)}</span>
+        ${etqs.length ? `<span class="etqs">${etqs.map((e) => `<span class="etq">${esc(e)}</span>`).join("")}</span>` : ""}
         <span class="desc">${esc(u.descripcion)}</span>
         <span class="host">${esc(host)}</span>
       </span>

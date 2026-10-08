@@ -84,7 +84,8 @@ main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; fle
 .util.tono-etapa .ico { background: var(--verde-bg); color: var(--verde-oscuro); }
 .cuerpo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .titulo { font-weight: 700; font-size: 1.05rem; }
-.etq { display: inline-block; vertical-align: 2px; margin-left: 4px; font-size: .7rem; font-weight: 600; color: var(--azul);
+.etqs { display: flex; flex-wrap: wrap; gap: 4px; margin: 1px 0 2px; }
+.etq { display: inline-block; font-size: .7rem; font-weight: 600; color: var(--azul);
   background: var(--azul-bg); padding: 1px 8px; border-radius: 999px; }
 .desc { color: var(--suave); font-size: .92rem; }
 .host { color: var(--suave); opacity: .75; font-size: .78rem; margin-top: 4px; overflow-wrap: anywhere; }
