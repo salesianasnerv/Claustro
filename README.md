@@ -15,4 +15,4 @@ Solo hay que editar `utilidades.js` (las instrucciones están al principio del a
 - `utilidades.js`: la lista de utilidades.
 - `logo.svg`, `icon-*.png`, `favicon-*.png`, `favicon.ico`: logo e iconos (pestaña del navegador, app en el móvil).
 - `manifest.json`, `sw.js`: permiten instalar el portal como app (PWA) y abrirlo sin conexión.
-- `og-image.png`: imagen que aparece al compartir el enlace por WhatsApp, Teams, correo o redes. Si la web se publica en una dirección distinta de `utilidades-profesorado.vercel.app`, hay que cambiarla en `index.html` (líneas con `og:` y `twitter:`).
+- `og-image.png`: imagen que aparece al compartir el enlace por WhatsApp, Teams, correo o redes. Si la web se publica en una dirección distinta de `claustro-utilidades.vercel.app`, hay que cambiarla en `index.html` (líneas con `og:` y `twitter:`).
