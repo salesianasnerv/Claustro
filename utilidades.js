@@ -26,6 +26,12 @@ window.PORTAL = {
       url: "https://biblioteca-nervion.vercel.app/",
       icono: "libro",
     },
+    {
+      titulo: "Calendario",
+      descripcion: "Calendario del curso (se abre con la cuenta del colegio).",
+      url: "https://salesianas.sharepoint.com/:w:/s/E-NER/Comisionpedagogica/IQDO5KKwO-SWRKH9DHEX6jNaAVEkqT0b1dWZ5_aWuDWlkm4?e=QrZExl",
+      icono: "calendario",
+    },
   ],
 
   // La primera es la web de Pastoral completa; las demás aparecen debajo,
