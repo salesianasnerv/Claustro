@@ -60,6 +60,7 @@ main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; fle
 .apartado h2 { display: flex; align-items: center; gap: 10px; font-size: 1.35rem; margin: 0; }
 .marca-ap { width: 6px; height: 22px; border-radius: 3px; }
 .marca-ap.general { background: var(--naranja); }
+.marca-ap.pastoral { background: #009abb; }
 .marca-ap.etapa { background: var(--verde); }
 .sub { color: var(--suave); margin: 4px 0 16px; }
 .etapa + .etapa { margin-top: 24px; }
@@ -81,6 +82,7 @@ main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; fle
 .ico { flex: none; width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; }
 .ico svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .util.tono-general .ico { background: rgba(238, 113, 42, .13); color: var(--naranja); }
+.util.tono-pastoral .ico { background: var(--azul-bg); color: var(--azul); }
 .util.tono-etapa .ico { background: var(--verde-bg); color: var(--verde-oscuro); }
 .cuerpo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .titulo { font-weight: 700; font-size: 1.05rem; }
@@ -93,6 +95,17 @@ main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; fle
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s, transform .15s; }
 .util:hover .flecha { stroke: var(--azul); transform: translate(2px, -2px); }
 
+/* Pastoral: web completa y, debajo, accesos directos a lo que hay dentro */
+.dentro { position: relative; margin: 10px 0 0 22px; padding: 4px 0 0 20px; border-left: 2px solid var(--azul-bg); }
+.dentro::before { content: ""; position: absolute; left: -2px; top: -10px; height: 10px; border-left: 2px solid var(--azul-bg); }
+.dentro-t { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--suave); margin: 0 0 10px; }
+.dentro .rejilla { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.dentro .util { padding: 14px 40px 14px 14px; gap: 12px; }
+.dentro .ico { width: 38px; height: 38px; border-radius: 10px; }
+.dentro .ico svg { width: 20px; height: 20px; }
+.dentro .titulo { font-size: .98rem; }
+.dentro .flecha { top: 14px; right: 12px; }
+
 .vacio { color: var(--suave); text-align: center; padding: 40px 0; }
 .pie { text-align: center; color: var(--suave); font-size: 13px; padding: 20px 16px; border-top: 1px solid var(--borde); }
 
@@ -100,5 +113,6 @@ main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; fle
   .marca .logo { height: 32px; }
   .marca span { font-size: 15px; padding-left: 10px; }
   .portada { padding-top: 28px; }
-  .rejilla { grid-template-columns: 1fr; }
+  .rejilla, .dentro .rejilla { grid-template-columns: 1fr; }
+  .dentro { margin-left: 10px; padding-left: 14px; }
 }
