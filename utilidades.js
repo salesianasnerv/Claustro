@@ -68,6 +68,13 @@ window.PORTAL = {
       nombre: "ESO y Bachillerato",
       utilidades: [
         {
+          titulo: "Horarios y sustituciones",
+          descripcion: "Sustituciones y avisos del día, dónde está cada compañero/a, horarios de profesorado y grupos, y recreos.",
+          url: "https://horarios-nervion.vercel.app/",
+          icono: "reloj",
+          etiqueta: ["ESO", "Bachillerato"],
+        },
+        {
           titulo: "Control de baños",
           descripcion: "Registro de las salidas al baño del alumnado e informes por clase, franjas horarias o alumno/a.",
           url: "https://control-wc.vercel.app/",
