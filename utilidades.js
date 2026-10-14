@@ -7,7 +7,7 @@
   - descripcion: una frase corta.
   - url:         dirección completa (https://...).
   - icono:       uno de estos: pastoral, estrella, sol, corazon, wc, calendario,
-                 documento, personas, reloj, libro, grafica, enlace.
+                 documento, personas, reloj, libro, grafica, reserva, carpeta, correo, enlace.
   - etiqueta:    (opcional) texto pequeño, p. ej. "Nuevo".
                  Para poner varias: ["ESO", "Bachillerato"].
 
@@ -31,6 +31,24 @@ window.PORTAL = {
       descripcion: "Calendario del curso (se abre con la cuenta del colegio).",
       url: "https://salesianas.sharepoint.com/:w:/s/E-NER/Comisionpedagogica/IQDO5KKwO-SWRKH9DHEX6jNaAVEkqT0b1dWZ5_aWuDWlkm4?e=QrZExl",
       icono: "calendario",
+    },
+    {
+      titulo: "Reserva de espacios",
+      descripcion: "Reserva de aulas, espacios, iPads y portátiles del colegio.",
+      url: "https://reserva-espacios.vercel.app/",
+      icono: "reserva",
+    },
+    {
+      titulo: "SharePoint",
+      descripcion: "Sitio del colegio en SharePoint: documentos y carpetas compartidas del claustro.",
+      url: "https://salesianas.sharepoint.com/sites/E-NER",
+      icono: "carpeta",
+    },
+    {
+      titulo: "Outlook",
+      descripcion: "Correo del colegio (cuenta @salesianas.org).",
+      url: "https://outlook.office.com/mail/",
+      icono: "correo",
     },
   ],
 
