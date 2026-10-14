@@ -28,8 +28,8 @@ window.PORTAL = {
     },
     {
       titulo: "Calendario",
-      descripcion: "Calendario del curso (se abre con la cuenta del colegio).",
-      url: "https://salesianas.sharepoint.com/:w:/s/E-NER/Comisionpedagogica/IQDO5KKwO-SWRKH9DHEX6jNaAVEkqT0b1dWZ5_aWuDWlkm4?e=QrZExl",
+      descripcion: "Calendario del curso por meses, con filtros por etapa y suscripción en el móvil.",
+      url: "https://calendario-nervion.vercel.app/",
       icono: "calendario",
     },
     {
