@@ -63,8 +63,8 @@ main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; fle
 .marca-ap.pastoral { background: #009abb; }
 .marca-ap.etapa { background: var(--verde); }
 .sub { color: var(--suave); margin: 4px 0 16px; }
-.etapa + .etapa { margin-top: 24px; }
-.etapa h3 { font-size: .82rem; text-transform: uppercase; letter-spacing: .07em; color: var(--suave); margin: 0 0 10px; }
+.etapa + .etapa, .grupo + .grupo { margin-top: 24px; }
+.etapa h3, .grupo h3 { font-size: .82rem; text-transform: uppercase; letter-spacing: .07em; color: var(--suave); margin: 0 0 10px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
 .chips button { border: 1px solid var(--borde); background: var(--panel); color: var(--suave); border-radius: 999px;
@@ -89,6 +89,9 @@ main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; fle
 .etqs { display: flex; flex-wrap: wrap; gap: 4px; margin: 1px 0 2px; }
 .etq { display: inline-block; font-size: .7rem; font-weight: 600; color: var(--azul);
   background: var(--azul-bg); padding: 1px 8px; border-radius: 999px; }
+.util.tono-general .etq { color: var(--naranja); background: rgba(238, 113, 42, .13); }
+.util.tono-pastoral .etq { color: var(--azul); background: var(--azul-bg); }
+.util.tono-etapa .etq { color: var(--verde-oscuro); background: var(--verde-bg); }
 .desc { color: var(--suave); font-size: .92rem; }
 .host { color: var(--suave); opacity: .75; font-size: .78rem; margin-top: 4px; overflow-wrap: anywhere; }
 .flecha { position: absolute; top: 18px; right: 16px; width: 18px; height: 18px; fill: none; stroke: var(--suave);

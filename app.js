@@ -43,7 +43,11 @@
   }
 
   $("curso").textContent = P.curso;
-  $("general").innerHTML = P.general.map((u) => tarjeta(u, "general")).join("");
+  $("general").innerHTML = P.general.map((g) => `
+    <div class="grupo">
+      <h3>${esc(g.nombre)}</h3>
+      <div class="rejilla">${g.utilidades.map((u) => tarjeta(u, "general")).join("")}</div>
+    </div>`).join("");
   // Pastoral: la primera es la web completa; el resto son accesos directos a lo que hay dentro de ella
   const [pasWeb, ...pasDentro] = P.pastoral || [];
   $("pastoral").innerHTML = pasWeb ? `
@@ -95,6 +99,7 @@
     const nPas = $("pastoral").querySelectorAll(".util:not([hidden])").length;
     $("apGeneral").hidden = nGen === 0;
     $("apPastoral").hidden = nPas === 0;
+    document.querySelectorAll("#general > .grupo").forEach((g) => { g.hidden = !g.querySelector(".util:not([hidden])"); });
     document.querySelectorAll("#pastoral .dentro").forEach((d) => { d.hidden = !d.querySelector(".util:not([hidden])"); });
     $("apEtapas").hidden = total === 0 && !!q;
     $("vacio").hidden = nGen + nPas + total > 0;

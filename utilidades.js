@@ -12,6 +12,8 @@
                  Para poner varias: ["ESO", "Bachillerato"].
 
   Hay tres apartados: general, pastoral y etapas.
+  GENERAL está dividido en grupos (Enlaces y Utilidades): cada utilidad va
+  dentro del grupo que le corresponda, en el orden en que quieras que salga.
   Las ETAPAS aparecen en el orden en que están escritas. Para crear una etapa
   nueva (p. ej. Infantil o Primaria), copia un bloque de etapa completo.
 */
@@ -19,36 +21,47 @@
 window.PORTAL = {
   curso: "2026-2027",
 
+  // General se divide en grupos; aparecen en el orden en que están escritos.
   general: [
     {
-      titulo: "Biblioteca",
-      descripcion: "Catálogo, reservas y préstamos de libros de la biblioteca del colegio.",
-      url: "https://biblioteca-nervion.vercel.app/",
-      icono: "libro",
+      nombre: "Enlaces",
+      utilidades: [
+        {
+          titulo: "Outlook",
+          descripcion: "Correo del colegio (cuenta @salesianas.org).",
+          url: "https://outlook.office.com/mail/",
+          icono: "correo",
+        },
+        {
+          titulo: "SharePoint",
+          descripcion: "Sitio del colegio en SharePoint: documentos y carpetas compartidas del claustro.",
+          url: "https://salesianas.sharepoint.com/sites/E-NER",
+          icono: "carpeta",
+        },
+      ],
     },
     {
-      titulo: "Calendario",
-      descripcion: "Calendario del curso por meses, con filtros por etapa y suscripción en el móvil.",
-      url: "https://calendario-nervion.vercel.app/",
-      icono: "calendario",
-    },
-    {
-      titulo: "Reserva de espacios",
-      descripcion: "Reserva de aulas, espacios, iPads y portátiles del colegio.",
-      url: "https://reserva-espacios.vercel.app/",
-      icono: "reserva",
-    },
-    {
-      titulo: "SharePoint",
-      descripcion: "Sitio del colegio en SharePoint: documentos y carpetas compartidas del claustro.",
-      url: "https://salesianas.sharepoint.com/sites/E-NER",
-      icono: "carpeta",
-    },
-    {
-      titulo: "Outlook",
-      descripcion: "Correo del colegio (cuenta @salesianas.org).",
-      url: "https://outlook.office.com/mail/",
-      icono: "correo",
+      nombre: "Utilidades",
+      utilidades: [
+        {
+          titulo: "Calendario",
+          descripcion: "Calendario del curso por meses, con filtros por etapa y suscripción en el móvil.",
+          url: "https://calendario-nervion.vercel.app/",
+          icono: "calendario",
+        },
+        {
+          titulo: "Reserva de espacios",
+          descripcion: "Reserva de aulas, espacios, iPads y portátiles del colegio.",
+          url: "https://reserva-espacios.vercel.app/",
+          icono: "reserva",
+        },
+        {
+          titulo: "Biblioteca",
+          descripcion: "Catálogo, reservas y préstamos de libros de la biblioteca del colegio.",
+          url: "https://biblioteca-nervion.vercel.app/",
+          icono: "libro",
+        },
+      ],
     },
   ],
 
