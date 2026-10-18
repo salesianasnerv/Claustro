@@ -7,7 +7,7 @@
   - descripcion: una frase corta.
   - url:         dirección completa (https://...).
   - icono:       uno de estos: pastoral, estrella, sol, corazon, wc, calendario,
-                 documento, personas, reloj, libro, grafica, reserva, carpeta, correo, enlace.
+                 documento, personas, reloj, libro, grafica, reserva, carpeta, correo, enlace, aula.
   - etiqueta:    (opcional) texto pequeño, p. ej. "Nuevo".
                  Para poner varias: ["ESO", "Bachillerato"].
 
@@ -111,7 +111,7 @@ window.PORTAL = {
 
   etapas: [
     {
-      nombre: "ESO y Bachillerato",
+      nombre: "Primaria, ESO y Bachillerato",
       utilidades: [
         {
           titulo: "Horarios y sustituciones",
@@ -140,6 +140,13 @@ window.PORTAL = {
           url: "https://bachillerato-nervion.vercel.app/",
           icono: "calendario",
           etiqueta: "Bachillerato",
+        },
+        {
+          titulo: "Distribución del aula",
+          descripcion: "Monta el plano del aula, sienta al alumnado (por niveles, parejas que no deben coincidir, atención a la diversidad) e imprime la distribución.",
+          url: "https://aula-nervion.vercel.app/",
+          icono: "aula",
+          etiqueta: ["Primaria", "ESO", "Bachillerato"],
         },
       ],
     },
