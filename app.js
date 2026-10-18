@@ -135,19 +135,17 @@
 
   function avisar(texto, tipo) { aviso.textContent = texto; aviso.className = "aviso " + (tipo || ""); }
 
-  const MAX_MB = 5;
+  const MAX_MB = 3;
   const archivo = $("propArchivo");
   const tamano = (b) => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
+  const leerBase64 = (f) => new Promise((ok, mal) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(",")[1]);
+    r.onerror = mal;
+    r.readAsDataURL(f);
+  });
 
-  // Al volver de FormSubmit tras un envío correcto: abrir el bloque y dar las gracias
-  if (new URLSearchParams(location.search).has("enviado")) {
-    history.replaceState(null, "", location.pathname);
-    form.closest("details").open = true;
-    avisar("¡Gracias! Tu propuesta se ha enviado.", "ok");
-    $("apPropuestas").scrollIntoView();
-  }
-
-  form.addEventListener("submit", (ev) => {
+  form.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const d = Object.fromEntries(new FormData(form));
     if (d._honey) return;
@@ -160,46 +158,51 @@
 
     const sec = SECCIONES[d.seccion].nombre;
     const asunto = `Formularios | [UTILIDADES] [${sec}]` + (d.utilidad ? ` [${d.utilidad}]` : "");
-    const datos = {
-      _subject: asunto, _template: "table", _captcha: "false",
-      _next: location.origin + location.pathname + "?enviado=1",
-      "Nombre y apellidos": d.nombre.trim(),
-      "Correo": d.correo.trim() || "(no indicado)",
-      "Sección": sec,
-      "Utilidad": d.utilidad || "—",
-      "Propuesta": d.texto.trim(),
-    };
-    if (d.correo) datos._replyto = d.correo.trim();
-
     const cfg = P.propuestas || {};
+
     if (cfg.prueba) {
-      const vista = { ...datos, "Adjunto": f ? `${f.name} (${tamano(f.size)})` : "—" };
+      const vista = {
+        "Nombre y apellidos": d.nombre.trim(), "Correo": d.correo.trim() || "(no indicado)", "Sección": sec,
+        "Utilidad": d.utilidad || "—", "Propuesta": d.texto.trim(), "Adjunto": f ? `${f.name} (${tamano(f.size)})` : "—",
+      };
       $("propPrueba")?.remove();
       form.insertAdjacentHTML("afterend", `<div class="prueba" id="propPrueba">
         <p class="prueba-t">Modo prueba · no se ha enviado nada. Este es el correo que llegaría a ${esc(cfg.correo)}:</p>
         <p><strong>Asunto:</strong> ${esc(asunto)}</p>
-        <dl>${Object.entries(vista).filter(([k]) => !k.startsWith("_")).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+        <dl>${Object.entries(vista).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       </div>`);
       return avisar("Vista previa generada (modo prueba).", "ok");
     }
 
-    // Envío clásico (necesario para el adjunto): se crea un formulario con los datos y se envía a FormSubmit,
-    // que después devuelve al portal con ?enviado=1
-    const envio = document.createElement("form");
-    envio.method = "POST";
-    envio.enctype = "multipart/form-data";
-    envio.action = `https://formsubmit.co/${cfg.correo}`;
-    envio.hidden = true;
-    for (const [k, v] of Object.entries(datos)) {
-      const inp = document.createElement("input");
-      inp.type = "hidden"; inp.name = k; inp.value = v;
-      envio.appendChild(inp);
-    }
-    if (f) envio.appendChild(archivo);
-    document.body.appendChild(envio);
-    $("propEnviar").disabled = true;
+    // El correo lo envía el propio portal (api/propuesta.js en Vercel)
+    const btn = $("propEnviar");
+    btn.disabled = true;
     avisar("Enviando…");
-    envio.submit();
+    const corte = new AbortController();
+    const reloj = setTimeout(() => corte.abort(), 25000);
+    try {
+      const datos = {
+        nombre: d.nombre, correo: d.correo, seccion: d.seccion, utilidad: d.utilidad || "", texto: d.texto, _honey: d._honey,
+        adjunto: f ? { nombre: f.name, tipo: f.type, contenido: await leerBase64(f) } : null,
+      };
+      const r = await fetch("api/propuesta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos),
+        signal: corte.signal,
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || "");
+      form.reset();
+      selSec.dispatchEvent(new Event("change"));
+      avisar("¡Gracias! Tu propuesta se ha enviado.", "ok");
+    } catch (err) {
+      const motivo = err.name === "AbortError" ? "El envío ha tardado demasiado." : (err.message || "No se ha podido enviar.");
+      avisar(`${motivo} Inténtalo de nuevo o escribe a ${cfg.correo}.`, "error");
+    } finally {
+      clearTimeout(reloj);
+      btn.disabled = false;
+    }
   });
 
   // Botones para ir a cada sección: se quedan fijos bajo la cabecera y marcan la sección en la que estás

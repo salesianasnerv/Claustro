@@ -1,6 +1,6 @@
 // Permite instalar el portal como app y abrirlo sin conexión.
 // Si cambias la lista de archivos, sube también el número de VERSION.
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE = `utilidades-${VERSION}`;
 
 const APP_SHELL = [
