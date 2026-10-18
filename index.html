@@ -54,6 +54,13 @@
       </label>
     </section>
 
+    <nav class="saltos" id="saltos" aria-label="Ir a cada sección">
+      <a href="#apGeneral"><span class="marca-ap general"></span>General</a>
+      <a href="#apPastoral"><span class="marca-ap pastoral"></span>Pastoral</a>
+      <a href="#apEtapas"><span class="marca-ap etapa"></span>Por etapa</a>
+      <a href="#apPropuestas"><span class="marca-ap propuesta"></span>Propuestas</a>
+    </nav>
+
     <section class="apartado" id="apGeneral">
       <h2><span class="marca-ap general"></span>General</h2>
       <p class="sub">Para todo el claustro.</p>
@@ -74,9 +81,67 @@
     </section>
 
     <p class="vacio" id="vacio" hidden>No hay ninguna utilidad que coincida con la búsqueda.</p>
+
+    <section class="apartado" id="apPropuestas">
+      <details class="plegable">
+      <summary>
+        <span class="plg-txt">
+          <h2><span class="marca-ap propuesta"></span>Propuestas</h2>
+          <p class="sub">¿Tienes una idea, echas algo en falta o has visto un error? Cuéntanoslo.</p>
+        </span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </summary>
+      <form class="form-prop" id="formProp" novalidate>
+        <div class="fila">
+          <label class="campo">
+            <span>Nombre y apellidos</span>
+            <input name="nombre" type="text" autocomplete="name" required>
+          </label>
+          <label class="campo">
+            <span>Correo <em>(opcional)</em></span>
+            <input name="correo" type="email" autocomplete="email" placeholder="nombre@salesianas.org">
+          </label>
+        </div>
+        <div class="fila">
+          <label class="campo">
+            <span>Sección</span>
+            <select name="seccion" id="propSeccion" required>
+              <option value="" disabled selected>Elige una sección…</option>
+              <option value="general">General</option>
+              <option value="pastoral">Pastoral</option>
+              <option value="etapas">Por etapas</option>
+              <option value="equipos">Por equipos</option>
+              <option value="otros">Otros</option>
+            </select>
+          </label>
+          <label class="campo" id="campoUtil" hidden>
+            <span>Utilidad</span>
+            <select name="utilidad" id="propUtil"></select>
+          </label>
+        </div>
+        <label class="campo">
+          <span>Propuesta <em>(explica tu propuesta lo más detalladamente posible)</em></span>
+          <textarea name="texto" rows="5" required></textarea>
+        </label>
+        <label class="campo">
+          <span>Adjunto <em>(opcional · imagen o PDF, máx. 5 MB)</em></span>
+          <ul class="ayuda">
+            <li><strong>Errores:</strong> una captura de pantalla explica más que un párrafo («este botón no hace nada», «aquí sale mal la fecha»).</li>
+            <li><strong>Ideas nuevas:</strong> un boceto, un documento de ejemplo o una plantilla que ya uses en papel.</li>
+          </ul>
+          <input type="file" name="attachment" id="propArchivo" accept="image/*,application/pdf">
+        </label>
+        <input type="text" name="_honey" class="trampa" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="acciones">
+          <button type="submit" class="btn" id="propEnviar">Enviar propuesta</button>
+          <p class="aviso" id="propAviso" role="status" aria-live="polite"></p>
+        </div>
+      </form>
+      </details>
+    </section>
   </main>
 
-  <footer class="pie">Escuelas Salesianas María Auxiliadora | Uso interno del profesorado</footer>
+  <footer class="pie">Escuelas Salesianas María Auxiliadora · Nervión (Sevilla)</footer>
 
   <script src="utilidades.js"></script>
   <script src="app.js"></script>

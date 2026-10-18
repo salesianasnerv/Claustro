@@ -21,6 +21,11 @@
 window.PORTAL = {
   curso: "2026-2027",
 
+  // Formulario de propuestas (al final del portal).
+  // prueba: true  -> no envía nada; muestra en pantalla el asunto y el contenido del correo.
+  // prueba: false -> envía el correo de verdad.
+  propuestas: { correo: "web@nervion.salesianas.org", prueba: false },
+
   // General se divide en grupos; aparecen en el orden en que están escritos.
   general: [
     {
@@ -99,6 +104,10 @@ window.PORTAL = {
       icono: "corazon",
     },
   ],
+
+  // Webs de cada equipo (aparecen en el formulario de propuestas, sección "Por equipos").
+  // Mismo formato que las demás utilidades. De momento no hay ninguna.
+  equipos: [],
 
   etapas: [
     {

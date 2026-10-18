@@ -103,10 +103,141 @@
     document.querySelectorAll("#pastoral .dentro").forEach((d) => { d.hidden = !d.querySelector(".util:not([hidden])"); });
     $("apEtapas").hidden = total === 0 && !!q;
     $("vacio").hidden = nGen + nPas + total > 0;
+    document.querySelectorAll("#saltos a").forEach((a) => { a.hidden = document.querySelector(a.getAttribute("href")).hidden; });
   }
 
   $("buscar").addEventListener("input", filtrar);
   filtrar();
+
+  // Formulario de propuestas: el desplegable "Utilidad" cambia según la sección elegida
+  const SECCIONES = {
+    general: { nombre: "General", grupos: P.general.map((g) => [g.nombre, g.utilidades]) },
+    pastoral: { nombre: "Pastoral", grupos: [["", P.pastoral || []]] },
+    etapas: { nombre: "Por etapas", grupos: P.etapas.map((e) => [e.nombre, e.utilidades]) },
+    equipos: { nombre: "Por equipos", grupos: [["", P.equipos || []]] },
+    otros: { nombre: "Otros", grupos: [] },
+  };
+  const OTRA = "Otra / nueva utilidad";
+  const form = $("formProp"), selSec = $("propSeccion"), selUtil = $("propUtil"), aviso = $("propAviso");
+
+  selSec.addEventListener("change", () => {
+    const s = SECCIONES[selSec.value];
+    const hay = s && selSec.value !== "otros";
+    $("campoUtil").hidden = !hay;
+    selUtil.required = hay;
+    if (!hay) { selUtil.innerHTML = ""; return; }
+    const opc = (u) => `<option>${esc(u.titulo)}</option>`;
+    selUtil.innerHTML = `<option value="" disabled selected>Elige una utilidad…</option>` +
+      s.grupos.filter(([, us]) => us.length).map(([n, us]) => n
+        ? `<optgroup label="${esc(n)}">${us.map(opc).join("")}</optgroup>` : us.map(opc).join("")).join("") +
+      `<option>${OTRA}</option>`;
+  });
+
+  function avisar(texto, tipo) { aviso.textContent = texto; aviso.className = "aviso " + (tipo || ""); }
+
+  const MAX_MB = 5;
+  const archivo = $("propArchivo");
+  const tamano = (b) => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
+
+  // Al volver de FormSubmit tras un envío correcto: abrir el bloque y dar las gracias
+  if (new URLSearchParams(location.search).has("enviado")) {
+    history.replaceState(null, "", location.pathname);
+    form.closest("details").open = true;
+    avisar("¡Gracias! Tu propuesta se ha enviado.", "ok");
+    $("apPropuestas").scrollIntoView();
+  }
+
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const d = Object.fromEntries(new FormData(form));
+    if (d._honey) return;
+    const falta = [...form.querySelectorAll("[required]")].find((c) => !c.value.trim());
+    if (falta) { falta.focus(); return avisar("Rellena los campos obligatorios.", "error"); }
+    if (d.correo && !form.correo.checkValidity()) { form.correo.focus(); return avisar("El correo no parece válido.", "error"); }
+    const f = archivo.files[0];
+    if (f && !/^image\/|\/pdf$/.test(f.type)) { archivo.focus(); return avisar("El adjunto debe ser una imagen o un PDF.", "error"); }
+    if (f && f.size > MAX_MB * 1048576) { archivo.focus(); return avisar(`El adjunto no puede pasar de ${MAX_MB} MB.`, "error"); }
+
+    const sec = SECCIONES[d.seccion].nombre;
+    const asunto = `Formularios | [UTILIDADES] [${sec}]` + (d.utilidad ? ` [${d.utilidad}]` : "");
+    const datos = {
+      _subject: asunto, _template: "table", _captcha: "false",
+      _next: location.origin + location.pathname + "?enviado=1",
+      "Nombre y apellidos": d.nombre.trim(),
+      "Correo": d.correo.trim() || "(no indicado)",
+      "Sección": sec,
+      "Utilidad": d.utilidad || "—",
+      "Propuesta": d.texto.trim(),
+    };
+    if (d.correo) datos._replyto = d.correo.trim();
+
+    const cfg = P.propuestas || {};
+    if (cfg.prueba) {
+      const vista = { ...datos, "Adjunto": f ? `${f.name} (${tamano(f.size)})` : "—" };
+      $("propPrueba")?.remove();
+      form.insertAdjacentHTML("afterend", `<div class="prueba" id="propPrueba">
+        <p class="prueba-t">Modo prueba · no se ha enviado nada. Este es el correo que llegaría a ${esc(cfg.correo)}:</p>
+        <p><strong>Asunto:</strong> ${esc(asunto)}</p>
+        <dl>${Object.entries(vista).filter(([k]) => !k.startsWith("_")).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+      </div>`);
+      return avisar("Vista previa generada (modo prueba).", "ok");
+    }
+
+    // Envío clásico (necesario para el adjunto): se crea un formulario con los datos y se envía a FormSubmit,
+    // que después devuelve al portal con ?enviado=1
+    const envio = document.createElement("form");
+    envio.method = "POST";
+    envio.enctype = "multipart/form-data";
+    envio.action = `https://formsubmit.co/${cfg.correo}`;
+    envio.hidden = true;
+    for (const [k, v] of Object.entries(datos)) {
+      const inp = document.createElement("input");
+      inp.type = "hidden"; inp.name = k; inp.value = v;
+      envio.appendChild(inp);
+    }
+    if (f) envio.appendChild(archivo);
+    document.body.appendChild(envio);
+    $("propEnviar").disabled = true;
+    avisar("Enviando…");
+    envio.submit();
+  });
+
+  // Botones para ir a cada sección: se quedan fijos bajo la cabecera y marcan la sección en la que estás
+  const saltos = $("saltos");
+  const enlaces = [...saltos.querySelectorAll("a")];
+  const fijarAltura = () => document.documentElement.style.setProperty("--cab", document.querySelector(".top").offsetHeight + "px");
+  fijarAltura();
+  addEventListener("resize", fijarAltura);
+
+  // Tras pulsar un botón, se queda marcado hasta que la persona vuelva a desplazarse por su cuenta
+  let elegido = null;
+  const soltar = () => { elegido = null; };
+  ["wheel", "touchmove", "keydown"].forEach((t) => addEventListener(t, soltar, { passive: true }));
+
+  saltos.addEventListener("click", (ev) => {
+    const a = ev.target.closest("a"); if (!a) return;
+    elegido = a;
+    marcarActivo();
+    const destino = document.querySelector(a.getAttribute("href"));
+    if (a.getAttribute("href") === "#apPropuestas") destino.querySelector("details").open = true;
+  });
+
+  function marcarActivo() {
+    const linea = document.querySelector(".top").offsetHeight + saltos.offsetHeight + 24;
+    let activo = null;
+    for (const a of enlaces) {
+      const s = document.querySelector(a.getAttribute("href"));
+      if (!s.hidden && s.getBoundingClientRect().top <= linea) activo = a;
+    }
+    // Al llegar al final de la página, la última sección visible
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) activo = enlaces.filter((a) => !a.hidden).pop();
+    if (elegido && !elegido.hidden) activo = elegido;
+    enlaces.forEach((a) => a.classList.toggle("activa", a === activo));
+    saltos.classList.toggle("pegado", saltos.getBoundingClientRect().top <= document.querySelector(".top").offsetHeight + 1);
+  }
+  addEventListener("scroll", marcarActivo, { passive: true });
+  $("buscar").addEventListener("input", marcarActivo);
+  marcarActivo();
 
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();

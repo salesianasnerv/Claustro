@@ -9,6 +9,14 @@ Portal que reúne en un solo sitio las utilidades del claustro de las Escuelas S
 
 Solo hay que editar `utilidades.js` (las instrucciones están al principio del archivo). En GitHub: abre el archivo, pulsa el lápiz ✏️, haz el cambio y pulsa *Commit changes*. Vercel publica la nueva versión sola en un minuto.
 
+## Formulario de propuestas
+
+Al final del portal hay un bloque plegable para enviar propuestas (con adjunto opcional: imagen o PDF de hasta 5 MB). Llegan a `web@nervion.salesianas.org` con el asunto `Formularios | [UTILIDADES] [Sección] [Utilidad]`. El envío lo hace el servicio gratuito FormSubmit.
+
+- La primera vez que alguien envíe una propuesta, FormSubmit manda a ese correo un mensaje para **activar** el formulario. Hay que pulsar el enlace una sola vez; hasta entonces no llega nada.
+- El correo de destino y el modo prueba se cambian en `utilidades.js` (`propuestas`). Con `prueba: true` no se envía nada y se ve en pantalla el correo que llegaría.
+- Las webs de la sección «Por equipos» se añaden en `equipos` dentro de `utilidades.js`.
+
 ## Archivos
 
 - `index.html`, `styles.css`, `app.js`: la web (normalmente no hace falta tocarlos).
