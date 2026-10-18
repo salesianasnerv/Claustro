@@ -126,9 +126,9 @@ window.PORTAL = {
           etiqueta: "ESO",
         },
         {
-          titulo: "Calendario de exámenes",
-          descripcion: "Calendario de exámenes de Bachillerato para el profesorado.",
-          url: "https://bachillerato-profesorado.vercel.app/",
+          titulo: "Bachillerato",
+          descripcion: "Calendario de exámenes (el profesorado los añade con Microsoft 365), suscripción a los calendarios de cada clase y enlaces de la PEvAU.",
+          url: "https://bachillerato-nervion.vercel.app/",
           icono: "calendario",
           etiqueta: "Bachillerato",
         },
