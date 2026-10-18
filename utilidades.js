@@ -61,6 +61,12 @@ window.PORTAL = {
           url: "https://biblioteca-nervion.vercel.app/",
           icono: "libro",
         },
+        {
+          titulo: "PAC",
+          descripcion: "Plan Anual de Centro: cada equipo redacta sus apartados y se descarga en PDF o Word.",
+          url: "https://pac-nervion.vercel.app/",
+          icono: "documento",
+        },
       ],
     },
   ],
@@ -111,6 +117,13 @@ window.PORTAL = {
           url: "https://control-wc.vercel.app/",
           icono: "wc",
           etiqueta: ["ESO", "Bachillerato"],
+        },
+        {
+          titulo: "Orientación",
+          descripcion: "Atención a la diversidad: alumnado con seguimiento, medidas, proceso de derivación, plantillas y recursos.",
+          url: "https://orientacion-nervion.vercel.app/",
+          icono: "personas",
+          etiqueta: "ESO",
         },
         {
           titulo: "Calendario de exámenes",
