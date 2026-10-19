@@ -19,6 +19,7 @@
     reserva: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>',
     carpeta: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="1.6"/><path d="M8.8 16.5a3.4 3.4 0 0 1 6.4 0"/>',
     correo: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/>',
+    incidencia: '<path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
     enlace: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   };
 
@@ -30,7 +31,8 @@
     const host = (() => { try { return new URL(u.url).host; } catch { return ""; } })();
     // etiqueta puede ser un texto ("Bachillerato") o una lista (["ESO", "Bachillerato"])
     const etqs = [].concat(u.etiqueta || []);
-    return `<a class="util tono-${tono}" href="${esc(u.url)}" target="_blank" rel="noopener"
+    // Se abre en la misma pestaña, salvo las marcadas como "externa", que van a una pestaña nueva
+    return `<a class="util tono-${tono}" href="${esc(u.url)}"${u.externa ? ` target="_blank" rel="noopener"` : ""}
         data-texto="${esc(norm(u.titulo + " " + u.descripcion + " " + etqs.join(" ")))}">
       <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONOS[u.icono] || ICONOS.enlace}</svg></span>
       <span class="cuerpo">
@@ -39,7 +41,7 @@
         <span class="desc">${esc(u.descripcion)}</span>
         <span class="host">${esc(host)}</span>
       </span>
-      <svg class="flecha" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+      <svg class="flecha" viewBox="0 0 24 24" aria-hidden="true"><path d="${u.externa ? "M7 17 17 7M9 7h8v8" : "M5 12h14M13 6l6 6-6 6"}"/></svg>
     </a>`;
   }
 
@@ -227,14 +229,16 @@
   });
 
   function marcarActivo() {
-    const linea = document.querySelector(".top").offsetHeight + saltos.offsetHeight + 24;
+    let linea = document.querySelector(".top").offsetHeight + saltos.offsetHeight + 24;
+    // En la última pantalla, la línea de lectura baja hasta el final, para que las últimas secciones
+    // (aunque sean cortas) se vayan marcando una a una
+    const falta = document.documentElement.scrollHeight - (scrollY + innerHeight);
+    if (falta < innerHeight) linea += (innerHeight - linea) * (1 - Math.max(0, falta) / innerHeight);
     let activo = null;
     for (const a of enlaces) {
       const s = document.querySelector(a.getAttribute("href"));
       if (!s.hidden && s.getBoundingClientRect().top <= linea) activo = a;
     }
-    // Al llegar al final de la página, la última sección visible
-    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) activo = enlaces.filter((a) => !a.hidden).pop();
     if (elegido && !elegido.hidden) activo = elegido;
     enlaces.forEach((a) => a.classList.toggle("activa", a === activo));
     saltos.classList.toggle("pegado", saltos.getBoundingClientRect().top <= document.querySelector(".top").offsetHeight + 1);
@@ -243,5 +247,29 @@
   $("buscar").addEventListener("input", marcarActivo);
   marcarActivo();
 
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  // "Volver arriba" al final de cada apartado
+  document.querySelectorAll(".arriba").forEach((a) => a.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    elegido = null;
+    scrollTo({ top: 0 });
+  }));
+
+  // Instalar como app (PWA). En Chrome/Edge abre el instalador; en iPhone/iPad explica los pasos de Safari.
+  let instalador = null;
+  const esIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const enApp = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const pintarInstalar = () => { if ($("instalar")) $("instalar").hidden = enApp(); };
+  function explicar(html) { $("dlgInstalarTxt").innerHTML = html; $("dlgInstalar").showModal(); }
+  $("instalar")?.addEventListener("click", async () => {
+    if (instalador) { instalador.prompt(); await instalador.userChoice.catch(() => {}); instalador = null; return; }
+    if (esIOS()) return explicar(`<ol><li>Pulsa el botón <b>Compartir</b> de Safari (el cuadrado con una flecha hacia arriba).</li>
+      <li>Elige <b>«Añadir a pantalla de inicio»</b>.</li><li>Pulsa <b>Añadir</b>. Aparecerá el icono del colegio en tu pantalla.</li></ol>`);
+    explicar(`<p>Abre el menú del navegador (⋮ o ⋯) y elige <b>«Instalar aplicación»</b> o <b>«Añadir a pantalla de inicio»</b>.</p>`);
+  });
+  addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); instalador = e; });
+  addEventListener("appinstalled", () => { instalador = null; pintarInstalar(); });
+  pintarInstalar();
+
+  // En local (pruebas) no se guarda copia, para ver siempre los cambios al momento
+  if ("serviceWorker" in navigator && location.hostname !== "localhost") navigator.serviceWorker.register("sw.js").catch(() => {});
 })();

@@ -7,9 +7,12 @@
   - descripcion: una frase corta.
   - url:         dirección completa (https://...).
   - icono:       uno de estos: pastoral, estrella, sol, corazon, wc, calendario,
-                 documento, personas, reloj, libro, grafica, reserva, carpeta, correo, enlace, aula.
+                 documento, personas, reloj, libro, grafica, reserva, carpeta, correo, enlace, aula,
+                 incidencia.
   - etiqueta:    (opcional) texto pequeño, p. ej. "Nuevo".
                  Para poner varias: ["ESO", "Bachillerato"].
+  - externa:     (opcional) true para que se abra en una pestaña nueva
+                 (Outlook, SharePoint…). Las demás se abren en la misma pestaña.
 
   Hay tres apartados: general, pastoral y etapas.
   GENERAL está dividido en grupos (Enlaces y Utilidades): cada utilidad va
@@ -36,12 +39,14 @@ window.PORTAL = {
           descripcion: "Correo del colegio (cuenta @salesianas.org).",
           url: "https://outlook.office.com/mail/",
           icono: "correo",
+          externa: true,
         },
         {
           titulo: "SharePoint",
           descripcion: "Sitio del colegio en SharePoint: documentos y carpetas compartidas del claustro.",
           url: "https://salesianas.sharepoint.com/sites/E-NER",
           icono: "carpeta",
+          externa: true,
         },
       ],
     },
@@ -71,6 +76,12 @@ window.PORTAL = {
           descripcion: "Plan Anual de Centro: cada equipo redacta sus apartados y se descarga en PDF o Word.",
           url: "https://pac-nervion.vercel.app/",
           icono: "documento",
+        },
+        {
+          titulo: "Incidencias",
+          descripcion: "Avisos de averías, mobiliario, mantenimiento, material y cuentas de Microsoft 365 y Google, con seguimiento de cada ticket.",
+          url: "https://incidencias-nervion.vercel.app/",
+          icono: "incidencia",
         },
       ],
     },

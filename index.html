@@ -41,13 +41,22 @@
 <body>
   <header class="top">
     <div class="marca"><img class="logo" src="logo.svg" alt="Salesianas Nervión"><span>Utilidades del profesorado</span></div>
+    <button type="button" class="instalar" id="instalar" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Instalar como app</span>
+    </button>
   </header>
+  <dialog class="dlg" id="dlgInstalar" aria-labelledby="dlgInstalarT">
+    <h2 id="dlgInstalarT">Instalar la app</h2>
+    <div id="dlgInstalarTxt"></div>
+    <form method="dialog"><button class="btn">Entendido</button></form>
+  </dialog>
 
   <main>
     <section class="portada">
       <span class="eyebrow">Claustro · Curso <span id="curso"></span></span>
       <h1>Utilidades del profesorado</h1>
-      <p>Todas las herramientas del colegio en un solo sitio. Cada una se abre en una pestaña nueva.</p>
+      <div class="franjas" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p>Todas las herramientas del colegio en un solo sitio. Cada una se abre en esta misma pestaña; para volver, usa la flecha Atrás o la etiqueta «Utilidades» de cada web.</p>
       <label class="buscar">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <input id="buscar" type="search" placeholder="Buscar utilidad…" autocomplete="off" aria-label="Buscar utilidad">
@@ -65,12 +74,14 @@
       <h2><span class="marca-ap general"></span>General</h2>
       <p class="sub">Para todo el claustro.</p>
       <div id="general"></div>
+      <a class="arriba" href="#">Volver arriba<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></a>
     </section>
 
     <section class="apartado" id="apPastoral">
       <h2><span class="marca-ap pastoral"></span>Pastoral</h2>
       <p class="sub">La web de Pastoral y cada una de sus propuestas.</p>
       <div id="pastoral"></div>
+      <a class="arriba" href="#">Volver arriba<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></a>
     </section>
 
     <section class="apartado" id="apEtapas">
@@ -78,6 +89,7 @@
       <p class="sub">Herramientas propias de cada etapa educativa.</p>
       <nav class="chips" id="chips" aria-label="Elegir etapa"></nav>
       <div id="etapas"></div>
+      <a class="arriba" href="#">Volver arriba<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></a>
     </section>
 
     <p class="vacio" id="vacio" hidden>No hay ninguna utilidad que coincida con la búsqueda.</p>
@@ -138,6 +150,7 @@
         </div>
       </form>
       </details>
+      <a class="arriba" href="#">Volver arriba<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></a>
     </section>
   </main>
 

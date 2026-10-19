@@ -9,6 +9,20 @@ Portal que reúne en un solo sitio las utilidades del claustro de las Escuelas S
 
 Solo hay que editar `utilidades.js` (las instrucciones están al principio del archivo). En GitHub: abre el archivo, pulsa el lápiz ✏️, haz el cambio y pulsa *Commit changes*. Vercel publica la nueva versión sola en un minuto.
 
+Las utilidades se abren en la misma pestaña. Si una web no debe abrirse así (Outlook, SharePoint…), se le pone `externa: true` y se abre en una pestaña nueva.
+
+## Barra «Volver al portal» en las demás webs
+
+`barra.js` dibuja, arriba del todo de cada web del colegio, una barra con «← Volver al portal», el nombre de la web y las tres franjas de colores. **Solo aparece si se ha llegado a esa web desde el portal**; si se entra directamente (favoritos, Teams, un enlace…), no sale. Se mantiene en esa pestaña aunque se cambie de página o se inicie sesión.
+
+Cada web la carga con una línea en su `<head>`:
+
+```html
+<script src="https://claustro-utilidades.vercel.app/barra.js" data-titulo="Nombre" defer></script>
+```
+
+`data-titulo` es opcional (si no se pone, se usa lo que va antes de « | » en el título de la página). Para cambiar la barra en todas las webs a la vez, basta con cambiar `barra.js` aquí.
+
 ## Formulario de propuestas
 
 Al final del portal hay un bloque plegable para enviar propuestas (con adjunto opcional: imagen o PDF de hasta 3 MB). Llegan a `web@nervion.salesianas.org` con el asunto `Formularios | [UTILIDADES] [Sección] [Utilidad]`.
@@ -24,6 +38,7 @@ El correo lo envía el propio portal: `api/propuesta.js` es una función de Verc
 
 - `index.html`, `styles.css`, `app.js`: la web (normalmente no hace falta tocarlos).
 - `utilidades.js`: la lista de utilidades.
+- `barra.js`: la barra «Volver al portal» que cargan las demás webs.
 - `logo.svg`, `icon-*.png`, `favicon-*.png`, `favicon.ico`: logo e iconos (pestaña del navegador, app en el móvil).
 - `api/propuesta.js`: envía por correo las propuestas del formulario.
 - `manifest.json`, `sw.js`: permiten instalar el portal como app (PWA) y abrirlo sin conexión.
