@@ -34,6 +34,15 @@ El correo lo envía el propio portal: `api/propuesta.js` es una función de Verc
 - Con `prueba: true` en `utilidades.js` (`propuestas`) no se envía nada y se ve en pantalla el correo que llegaría.
 - Las webs de la sección «Por equipos» se añaden en `equipos` dentro de `utilidades.js`.
 
+## Avisos de la web de Incidencias
+
+`api/aviso-incidencia.js` aprovecha la misma cuenta de Resend que las propuestas (misma `RESEND_API_KEY`, no hay que configurar nada más). La llama la base de datos de Incidencias (`Incidencias/supabase/avisos.sql`) cuando se crea una incidencia, cambia de estado o recibe un comentario.
+
+- Como Resend no tiene dominio verificado, **todos los avisos llegan a `web@nervion.salesianas.org`** con el asunto `Incidencias | [Categoría] [Nueva/Estado/Comentario] #0012 · Título`. Dentro, la fila «Avisar a» dice a quién iba dirigido.
+- En ese buzón, reglas de Outlook los reenvían: todos los que empiezan por «Incidencias |» a administracionnervion@salesianas.org y, si se quiere, los de cada categoría a su técnico.
+- Si un día se verifica un dominio en Resend: poner `PROPUESTAS_DE` (o `AVISOS_DE`) con ese dominio y `AVISOS_SECRETO` (la misma clave que en Supabase, tabla `inc_avisos_ajustes`), y cada aviso irá directamente a las personas.
+- `AVISOS_PRUEBA=si` no envía nada y devuelve el correo que se enviaría.
+
 ## Archivos
 
 - `index.html`, `styles.css`, `app.js`: la web (normalmente no hace falta tocarlos).
