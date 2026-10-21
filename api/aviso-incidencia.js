@@ -8,13 +8,19 @@
 //   va dirigido. Desde ese buzón, reglas de Outlook pueden reenviar cada categoría a su técnico.
 // · Con dominio verificado: se pone PROPUESTAS_DE (o AVISOS_DE) con ese dominio y AVISOS_SECRETO (la misma
 //   clave que en Supabase), y cada aviso va directamente a las personas de «para».
+// El nombre del remitente es siempre «Incidencias · Utilidades» (salvo que AVISOS_DE diga otro).
 // Opcional: AVISOS_PARA (buzón central, por defecto el de las propuestas) y AVISOS_PRUEBA=si (no envía nada).
 
 const crypto = require("crypto");
 
 const CENTRAL = process.env.AVISOS_PARA || process.env.PROPUESTAS_PARA || "web@nervion.salesianas.org";
-const DE_PROPIO = process.env.AVISOS_DE || process.env.PROPUESTAS_DE || "";
-const DE = DE_PROPIO || "Incidencias <onboarding@resend.dev>";
+// Remitente: la misma dirección que las propuestas, pero con el nombre «Incidencias · Utilidades»
+const NOMBRE = "Incidencias · Utilidades";
+const BASE = process.env.AVISOS_DE || process.env.PROPUESTAS_DE || "";
+const DIRECCION = (BASE.match(/<([^>]+)>/) || [, BASE])[1].trim() || "onboarding@resend.dev";
+const DE = process.env.AVISOS_DE || `${NOMBRE} <${DIRECCION}>`;
+// Remitente propio = dominio verificado en Resend (onboarding@resend.dev es el de pruebas)
+const DE_PROPIO = !/@resend\.dev$/i.test(DIRECCION);
 const WEB = "https://incidencias-nervion.vercel.app";
 const ESTADOS = { abierta: "Abierta", en_proceso: "En proceso", pausada: "Pausada (piezas)", cerrada: "Cerrada" };
 const PRIOS = { baja: "Baja", media: "Media", alta: "Alta / crítica" };
