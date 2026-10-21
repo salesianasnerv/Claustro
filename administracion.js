@@ -117,6 +117,10 @@ function descargarCuentas() {
 async function cargarTutorias() {
   const { data, error } = await sb.rpc('panel_tutorias');
   if (error) throw error;
+  // Orden: Infantil, Primaria, ESO, Bachillerato, Ciclos Formativos; dentro de cada etapa, por curso y letra
+  const etapa = g => { const t = `${g.etapa || ''} ${g.grupo}`.toLowerCase();
+    return /infantil/.test(t) ? 0 : /primaria|epo/.test(t) ? 1 : /eso/.test(t) ? 2 : /bach/.test(t) ? 3 : /ccff|fp|ciclo|grado/.test(t) ? 4 : 5; };
+  data.sort((a, b) => etapa(a) - etapa(b) || a.grupo.localeCompare(b.grupo, 'es', { numeric: true }));
   const opciones = personal.filter(p => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   $('#t-tutorias').innerHTML = `<thead><tr><th>Grupo</th><th>Etapa</th><th>Tutor o tutora</th></tr></thead><tbody>${
     data.map(g => `<tr><td>${esc(g.grupo)}</td><td>${esc(g.etapa || '')}</td><td><select data-grupo="${g.grupo_id}">
