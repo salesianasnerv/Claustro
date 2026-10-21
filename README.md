@@ -34,20 +34,6 @@ El correo lo envía el propio portal: `api/propuesta.js` es una función de Verc
 - Con `prueba: true` en `utilidades.js` (`propuestas`) no se envía nada y se ve en pantalla el correo que llegaría.
 - Las webs de la sección «Por equipos» se añaden en `equipos` dentro de `utilidades.js`.
 
-## Avisos de la web de Incidencias
-
-`api/aviso-incidencia.js` aprovecha la misma cuenta de Resend que las propuestas (misma `RESEND_API_KEY`; remitente con el nombre «Incidencias · Utilidades»). La llama la base de datos de Incidencias (`Incidencias/supabase/avisos.sql`):
-
-- **Nueva** → administración, con todos los datos.
-- **Asignada** → el técnico, con la descripción completa.
-- **Actualización** (estado, prioridad, responsable o comentario) → quien la creó.
-
-Como Resend no tiene dominio verificado, **todos llegan a `web@nervion.salesianas.org`** con el asunto `PARA a@…;b@… | Incidencias | [Categoría] [Tipo] #0012 · Título`. Un flujo de Power Automate en ese buzón los reenvía a las direcciones de `PARA` (explicado en el README de Incidencias).
-
-- Si un día se verifica un dominio en Resend: poner `PROPUESTAS_DE` (o `AVISOS_DE`) con ese dominio y `AVISOS_SECRETO` (la misma clave que en Supabase, tabla `inc_avisos_ajustes`); cada aviso irá directamente a las personas y el flujo deja de hacer falta.
-- `AVISOS_PRUEBA=si` no envía nada y devuelve el correo que se enviaría.
-- **Ojo:** este proyecto de Vercel no se publica solo al subir cambios a GitHub; hay que crear la publicación a mano (*Deployments → ⋯ → Create Deployment → main*).
-
 ## Archivos
 
 - `index.html`, `styles.css`, `app.js`: la web (normalmente no hace falta tocarlos).
