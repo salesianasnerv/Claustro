@@ -155,24 +155,89 @@ async function cargarOrientacion() {
       <td>${esc(personasDe(r.quien) || (r.quien === 'tutor' ? 'Los tutores de cada grupo (ver «Tutorías»)' : r.quien === 'equipo_docente' ? 'Profesorado enlazado con Horarios' : r.quien === 'etapa' ? 'Según el grupo de etapa de cada docente' : '—'))}</td></tr>`).join('')}
     <tr><td>Rol «Orientación» en la lista del personal</td><td>Editar</td><td>${esc((quien || []).find(r => r.quien.startsWith('Rol'))?.personas || '—')}</td></tr></tbody>`;
 }
-async function cambiarNivel(sel) {
+async function cambiarNivel(sel, msg = $('#o-msg')) {
   const { data: { user } } = await sb.auth.getUser();
   const { error } = await sb.from('orientacion_acceso')
     .update({ nivel: sel.value, cambiado: new Date().toISOString(), cambiado_por: user?.email }).eq('quien', sel.dataset.quien);
-  if (error) return aviso($('#o-msg'), 'No se ha guardado: ' + error.message, false);
-  aviso($('#o-msg'), 'Guardado: se aplica al momento');
+  if (error) return aviso(msg, 'No se ha guardado: ' + error.message, false);
+  aviso(msg, 'Guardado: se aplica al momento');
 }
 
 /* ---------- Quién puede hacer qué ---------- */
+// Cada web: lo que viene dado (todo el personal o un grupo de Microsoft 365, solo lectura) y los permisos que se
+// pueden cambiar aquí (tabla «permisos», o el rol «Orientación» de la lista del personal).
+const WEBS = [
+  { web: 'Panel de Administración', permiso: 'administracion', accion: 'Acceso además del Equipo Directivo' },
+  { web: 'Todas las webs', permiso: 'todas', accion: 'Administrar todas las webs a la vez' },
+  { web: 'Horarios', permiso: 'horarios', accion: 'Administrar ausencias, avisos y horarios' },
+  { web: 'Control de baños', permiso: 'banos', accion: 'Administrar alumnado y clases' },
+  { web: 'Reserva de espacios', permiso: 'reservas', accion: 'Administrar espacios y reservas' },
+  { web: 'Distribución del aula' },
+  { web: 'PAC', permiso: 'pac', accion: 'Coordinar el documento' },
+  { web: 'Calendario', permiso: 'calendario', accion: 'Administrar el calendario' },
+  { web: 'Incidencias', permiso: 'incidencias', accion: 'Gestionar incidencias', roles: { admin: 'Administración', coordinador: 'Coordinación', tecnico: 'Técnico/a' } },
+  { web: 'Orientación', permiso: 'orientacion_rol', accion: 'Rol «Orientación»: ver y editar todas las fichas', reglas: true },
+];
+const NIVELES = { editar: 'Editar', ver: 'Ver', medidas: 'Medidas', nada: 'Nada' };
+let abiertas = new Set();
+
 async function cargarQuien() {
-  const { data, error } = await sb.rpc('panel_quien_hace_que');
-  if (error) throw error;
-  const porWeb = {};
-  data.forEach(r => (porWeb[r.web] ||= []).push(r));
-  $('#q-lista').innerHTML = `<p class="adm-nota">Escuelas Salesianas María Auxiliadora · Nervión — situación a ${fecha(new Date())}</p>` +
-    Object.entries(porWeb).map(([web, filas]) => `<h3 class="web-t">${esc(web)}</h3>
-    <div class="adm-tabla-env"><table class="adm"><thead><tr><th>Qué</th><th>Quién</th><th>Personas</th></tr></thead><tbody>${
-      filas.map(r => `<tr><td>${esc(r.accion)}</td><td>${esc(r.quien)}</td><td>${esc(r.personas || '—')}</td></tr>`).join('')}</tbody></table></div>`).join('');
+  const [{ data: quien, error }, { data: permisos, error: e2 }, { data: reglas }] = await Promise.all([
+    sb.rpc('panel_quien_hace_que'), sb.rpc('panel_permisos'), sb.from('orientacion_acceso').select('*').order('orden')]);
+  if (error || e2) throw error || e2;
+  document.querySelectorAll('#q-lista details[open]').forEach(d => abiertas.add(d.dataset.web));
+  const activos = personal.filter(p => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  $('#q-lista').innerHTML = `<p class="adm-nota">Escuelas Salesianas María Auxiliadora · Nervión — situación a ${fecha(new Date())}. Lo que viene de un grupo de Microsoft 365 se cambia en ese grupo; el resto, aquí.</p>` +
+    WEBS.map(w => {
+      // Filas de solo lectura: todo el personal y grupos de Microsoft 365
+      const fijas = quien.filter(r => r.web === w.web && !r.quien.startsWith('Permiso') && !r.quien.startsWith('Rol') && !(w.reglas));
+      const lista = permisos.filter(p => p.web === w.permiso);
+      const roles = w.roles || null;
+      const filaPersona = p => `<li class="q-p">${esc(p.nombre)}
+        ${roles ? `<select data-rol data-web="${w.permiso}" data-email="${esc(p.email)}">${Object.entries(roles).map(([k, v]) => `<option value="${k}" ${k === p.rol ? 'selected' : ''}>${v}</option>`).join('')}</select>` : ''}
+        <button class="btn-s peligro" type="button" data-quitar data-web="${w.permiso}" data-email="${esc(p.email)}" title="Quitar">Quitar</button></li>`;
+      const anadir = w.permiso ? `<div class="q-add no-imprimir">
+        <select data-nuevo="${w.permiso}"><option value="">Añadir persona…</option>${activos.filter(p => !lista.some(l => l.email === p.email))
+          .map(p => `<option value="${esc(p.email)}">${esc(p.nombre)}</option>`).join('')}</select>
+        ${roles ? `<select data-nuevo-rol="${w.permiso}">${Object.entries(roles).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>` : ''}
+        <button class="btn-s pri" type="button" data-anadir="${w.permiso}">Añadir</button></div>` : '';
+      const reglasOrient = w.reglas ? (reglas || []).map(r => {
+        const etiqueta = QUIEN[r.quien] || `${grupos[r.quien] || r.quien} (todas las fichas)`;
+        const fila = quien.find(q => q.web === 'Orientación' && q.quien === (QUIEN[r.quien] ? null : (grupos[r.quien] || r.quien)));
+        return `<tr><td>${esc(etiqueta)}</td><td><select data-quien="${esc(r.quien)}">${Object.entries(NIVELES).map(([k, v]) =>
+          `<option value="${k}" ${k === r.nivel ? 'selected' : ''}>${v}</option>`).join('')}</select></td>
+          <td>${esc(fila?.personas || (r.quien === 'tutor' ? 'Los tutores de cada grupo (ver «Tutorías»)' : r.quien === 'equipo_docente' ? 'Profesorado enlazado con Horarios' : r.quien === 'etapa' ? 'Según el grupo de etapa de cada docente' : '—'))}</td></tr>`;
+      }).join('') : '';
+      const n = lista.length + fijas.length;
+      return `<details class="q-web" data-web="${esc(w.web)}" ${abiertas.has(w.web) ? 'open' : ''}>
+        <summary><b>${esc(w.web)}</b> <span class="adm-nota" style="margin:0">${w.permiso ? `${lista.length} con permiso` : ''}</span></summary>
+        <div class="adm-tabla-env"><table class="adm"><thead><tr><th>Qué</th><th>Quién</th><th>Personas</th></tr></thead><tbody>
+          ${fijas.map(r => `<tr><td>${esc(r.accion)}</td><td>${esc(r.quien)}</td><td>${esc(r.personas || '—')}</td></tr>`).join('')}
+          ${reglasOrient}
+          ${w.permiso ? `<tr><td>${esc(w.accion)}</td><td>Asignado en este panel</td><td><ul class="q-lista">${lista.map(filaPersona).join('') || '<li class="adm-nota">Nadie</li>'}</ul>${anadir}</td></tr>` : ''}
+        </tbody></table></div></details>`;
+    }).join('') + '<p id="q-msg"></p>';
+}
+async function anadirPermiso(web) {
+  const email = $(`[data-nuevo="${web}"]`).value;
+  if (!email) return;
+  const rol = $(`[data-nuevo-rol="${web}"]`)?.value || 'admin';
+  const { error } = await sb.rpc('panel_poner_permiso', { p_web: web, p_email: email, p_rol: rol });
+  if (error) return aviso($('#q-msg'), 'No se ha guardado: ' + error.message, false);
+  await cargarQuien(); aviso($('#q-msg'), 'Permiso añadido');
+}
+async function quitarPermiso(web, email) {
+  const p = personal.find(x => x.email === email);
+  if (!confirm(`¿Quitar a ${p?.nombre || email} este permiso?`)) return;
+  const { error } = await sb.rpc('panel_quitar_permiso', { p_web: web, p_email: email });
+  if (error) return aviso($('#q-msg'), 'No se ha quitado: ' + error.message, false);
+  await cargarQuien(); aviso($('#q-msg'), 'Permiso quitado');
+}
+async function cambiarRol(sel) {
+  const { error } = await sb.rpc('panel_poner_permiso', { p_web: sel.dataset.web, p_email: sel.dataset.email, p_rol: sel.value });
+  if (error) return aviso($('#q-msg'), 'No se ha guardado: ' + error.message, false);
+  aviso($('#q-msg'), 'Rol cambiado');
 }
 
 /* ---------- Pestañas y arranque ---------- */
@@ -219,6 +284,16 @@ async function mostrar(p) {
   $('#t-tutorias').addEventListener('change', e => e.target.matches('select[data-grupo]') && cambiarTutor(e.target));
   $('#t-orientacion').addEventListener('change', e => e.target.matches('select[data-quien]') && cambiarNivel(e.target));
   $('#q-imprimir').onclick = () => window.print();
+  window.addEventListener('beforeprint', () => document.querySelectorAll('#q-lista details').forEach(d => d.open = true));
+  $('#q-lista').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.anadir) anadirPermiso(b.dataset.anadir);
+    if ('quitar' in b.dataset) quitarPermiso(b.dataset.web, b.dataset.email);
+  });
+  $('#q-lista').addEventListener('change', e => {
+    if (e.target.matches('select[data-rol]')) cambiarRol(e.target);
+    if (e.target.matches('select[data-quien]')) cambiarNivel(e.target, $('#q-msg'));
+  });
 
   const inicial = location.hash.slice(1);
   if (CARGAS[inicial] && inicial !== 'personal') mostrar(inicial);
