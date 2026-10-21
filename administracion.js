@@ -22,16 +22,23 @@ async function cargarPersonal() {
   if (error) throw error;
   personal = data;
   grupos = Object.fromEntries((gs || []).map(g => [g.clave, g.nombre]));
+  // Filtro por grupo: etapas, PAS, cargos y otros, cada tipo en su apartado
+  const TIPOS = { etapa: 'Etapas', pas: 'PAS', cargo: 'Cargos', otro: 'Otros' };
+  $('#p-grupo').innerHTML = '<option value="">Todos los grupos</option><option value="-">Sin ningún grupo</option>' +
+    Object.entries(TIPOS).map(([t, nombre]) => `<optgroup label="${nombre}">${(gs || []).filter(g => g.tipo === t)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map(g => `<option value="${esc(g.clave)}">${esc(g.nombre)}</option>`).join('')}</optgroup>`).join('');
   pintarPersonal();
 }
 function pintarPersonal() {
   const q = $('#p-buscar').value.trim().toLowerCase();
   const acceso = $('#p-acceso').value;
+  const grupo = $('#p-grupo').value;
   const verInactivos = $('#p-inactivos').checked;
   const limite = acceso && acceso !== 'nunca' ? Date.now() - Number(acceso) * 864e5 : null;
   const filas = personal.filter(p =>
     (verInactivos || p.activo) &&
     (!q || (p.nombre + ' ' + p.email).toLowerCase().includes(q)) &&
+    (!grupo || (grupo === '-' ? !(p.grupos || []).length : (p.grupos || []).includes(grupo))) &&
     (acceso !== 'nunca' || !p.ultimo_acceso) &&
     (!limite || !p.ultimo_acceso || new Date(p.ultimo_acceso).getTime() < limite));
   $('#p-cuenta').textContent = `${filas.length} personas`;
@@ -196,7 +203,7 @@ async function mostrar(p) {
   await cargarPersonal().catch(e => $('#t-personal').outerHTML = `<p class="err">${esc(e.message)}</p>`);
 
   document.querySelectorAll('.adm-pest [data-p]').forEach(b => b.onclick = () => mostrar(b.dataset.p));
-  ['#p-buscar', '#p-acceso', '#p-inactivos'].forEach(s => $(s).addEventListener('input', pintarPersonal));
+  ['#p-buscar', '#p-grupo', '#p-acceso', '#p-inactivos'].forEach(s => $(s).addEventListener('input', pintarPersonal));
   $('#c-historial').onchange = pintarCuentas;
   $('#c-nueva').onclick = nuevaCuenta;
   $('#c-csv').onclick = descargarCuentas;
