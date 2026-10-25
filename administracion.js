@@ -140,7 +140,7 @@ async function cargarListas() {
   $('#t-cursos').innerHTML = `<thead><tr><th>Curso</th><th>Grupos</th><th>Alumnado</th><th>Por etapa</th><th>Estado</th><th></th></tr></thead><tbody>${
     data.map(c => `<tr><td><b>${esc(c.nombre)}</b></td><td>${c.grupos}</td><td>${c.alumnado}</td><td>${esc(c.por_etapa || '—')}</td>
       <td>${c.activo ? '<span class="tag-actual">Actual</span>' : '<span class="tag-off">Sin activar</span>'}</td>
-      <td style="white-space:nowrap"><button class="btn-s" type="button" data-ver-curso="${c.id}">Ver listas</button>${c.activo ? '' : ` <button class="btn-s pri" type="button" data-activar="${c.id}">Activar</button>`}</td></tr>`).join('')
+      <td style="white-space:nowrap"><button class="btn-s" type="button" data-ver-curso="${c.id}">Ver listas</button>${c.activo ? '' : ` <button class="btn-s pri" type="button" data-activar="${c.id}">Activar</button> <button class="btn-s peligro" type="button" data-quitar-curso="${c.id}">Quitar</button>`}</td></tr>`).join('')
     || '<tr><td colspan="6">Todavía no hay cursos.</td></tr>'}</tbody>`;
   const previo = $('#l-curso').value;
   $('#l-curso').innerHTML = data.map(c => `<option value="${c.id}">${esc(c.nombre)}${c.activo ? ' (actual)' : ''}</option>`).join('');
@@ -211,6 +211,15 @@ async function activarCurso(id) {
   const c = L.cursos.find(x => x.id === id);
   if (!confirm(`¿Activar ${c.nombre}?\n\nTodas las webs (Control de baños, Distribución del aula, Orientación…) pasarán a usar sus listas (${c.grupos} grupos, ${c.alumnado} alumnos/as). El curso actual queda guardado y se puede volver a activar.`)) return;
   if (await llamar('panel_activar_curso', { p_id: id }, `Curso actual: ${c.nombre}`)) await cargarListas();
+}
+async function quitarCurso(id) {
+  const c = L.cursos.find(x => x.id === id);
+  if (c.grupos || c.alumnado) {
+    const r = prompt(`Se borrará el curso ${c.nombre} con sus ${c.grupos} grupos y ${c.alumnado} alumnos/as. No se puede deshacer.\n\nPara confirmar, escribe el nombre del curso:`);
+    if (r === null) return;
+    if (r.trim() !== c.nombre) { aviso($('#l-msg'), 'No se ha quitado: el nombre no coincide.', false); return; }
+  } else if (!confirm(`¿Quitar el curso ${c.nombre}? Está vacío.`)) return;
+  if (await llamar('panel_quitar_curso', { p_id: id }, `Curso ${c.nombre} quitado.`)) await cargarListas();
 }
 
 // Lector de PDF (solo se descarga al importar)
@@ -631,6 +640,7 @@ async function mostrar(p) {
   $('#t-cursos').addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.activar) activarCurso(Number(b.dataset.activar));
+    if (b.dataset.quitarCurso) quitarCurso(Number(b.dataset.quitarCurso));
     if (b.dataset.verCurso) { $('#l-curso').value = b.dataset.verCurso; L.importadas = null; $('#l-vista').innerHTML = ''; await cargarGruposCurso(); $('#l-curso').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   });
   $('#l-vista').addEventListener('input', e => {
