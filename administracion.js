@@ -126,7 +126,7 @@ function descargarCuentas() {
 
 /* ---------- Cursos y listas ---------- */
 const ETAPAS = ['Infantil', 'Primaria', 'ESO', 'Bachillerato', 'CCFF'];
-const etapaDe = n => /bach/i.test(n) ? 'Bachillerato' : /infantil/i.test(n) ? 'Infantil' : /primaria|epo/i.test(n) ? 'Primaria'
+const etapaDe = n => /bach/i.test(n) ? 'Bachillerato' : /infant/i.test(n) ? 'Infantil' : /prim|epo/i.test(n) ? 'Primaria'
   : /eso/i.test(n) ? 'ESO' : /cfg|ccff|fp|ciclo|grado/i.test(n) ? 'CCFF' : '';
 const L = { cursos: [], grupos: [], importadas: null };
 const opcionesEtapa = sel => `<option value="">Elige etapa…</option>` + ETAPAS.map(e => `<option ${e === sel ? 'selected' : ''}>${e}</option>`).join('');
@@ -227,7 +227,10 @@ function cargarPdfJs() {
 // Nombres de Séneca → nombres más claros (se pueden corregir en la vista previa)
 const NOMBRES_SENECA = { '1ºABachSoc': '1º Bach A', '1ºBBachCi': '1º Bach B', '2º Bach HS': '2º Bach A', '2º BACH CyT': '2º Bach B' };
 const limpiarGrupo = s => NOMBRES_SENECA[s] ||
-  s.replace(/º\s*/, 'º ').replace(/\bESO\s*([A-Z])$/i, 'ESO $1').replace(/\bBACH\b/i, 'Bach').replace(/\s+/g, ' ').trim();
+  // «1ºA INFANT» → «1º Infantil A» · «3ºB PRIM» → «3º Primaria B»
+  s.replace(/^(\d)\s*º\s*([A-Z])\s*INFANT\w*$/i, (m, n, l) => `${n}º Infantil ${l.toUpperCase()}`)
+   .replace(/^(\d)\s*º\s*([A-Z])\s*PRIM\w*$/i, (m, n, l) => `${n}º Primaria ${l.toUpperCase()}`)
+   .replace(/º\s*/, 'º ').replace(/\bESO\s*([A-Z])$/i, 'ESO $1').replace(/\bBACH\b/i, 'Bach').replace(/\s+/g, ' ').trim();
 // PDF «Lista de clase» de Séneca: una clase por página (la misma lectura que usaba Control de baños)
 async function leerListasSeneca(file) {
   const lib = await cargarPdfJs();
@@ -246,7 +249,7 @@ async function leerListasSeneca(file) {
     const lineas = filas.sort((a, b) => b.y - a.y)
       .map(f => f.items.sort((a, b) => a.x - b.x).map(i => i.s).join(' ').replace(/\s+/g, ' ').trim());
     const texto = lineas.join('\n');
-    const m = texto.match(/LISTA DE CLASE DE\s+(.+?)\s*\(/);
+    const m = texto.match(/LISTA DE CLASE DE\s+(.+?)\s*(?:\(|$)/m);   // a veces sin «( Tres Años )» en la misma línea
     if (!m) continue;
     const tutor = (texto.match(/TUTOR\/A\s*:\s*(.+)/) || [])[1]?.trim() || '';
     const alumnos = [];
