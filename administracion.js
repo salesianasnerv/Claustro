@@ -15,6 +15,16 @@ const aviso = (el, txt, ok = true) => { el.className = ok ? 'ok' : 'err'; el.tex
 
 let grupos = {};        // clave de grupo de Microsoft 365 → nombre
 let personal = [];
+let tiposGrupo = {};    // clave de grupo → etapa, pas, cargo u otro
+// Grupos de una persona, una línea por tipo: «Etapa: ESO, Bachillerato» / «Cargos: …» / «Otros: …»
+function gruposEnLineas(claves) {
+  const TIPOS = [['etapa', 'Etapa'], ['pas', 'PAS'], ['cargo', 'Cargos'], ['otro', 'Otros']];
+  const lineas = TIPOS.map(([t, nombre]) => {
+    const gs = claves.filter(k => (tiposGrupo[k] || 'otro') === t).map(k => grupos[k] || k).sort((a, b) => a.localeCompare(b, 'es'));
+    return gs.length ? `<div class="g-linea"><span class="g-tipo">${nombre}</span> ${gs.map(esc).join(', ')}</div>` : '';
+  }).join('');
+  return lineas || '<span class="adm-nota">Ninguno</span>';
+}
 
 /* ---------- Personal ---------- */
 async function cargarPersonal() {
@@ -22,6 +32,7 @@ async function cargarPersonal() {
   if (error) throw error;
   personal = data;
   grupos = Object.fromEntries((gs || []).map(g => [g.clave, g.nombre]));
+  tiposGrupo = Object.fromEntries((gs || []).map(g => [g.clave, g.tipo]));
   // Filtro por grupo: etapas, PAS, cargos y otros, cada tipo en su apartado
   const TIPOS = { etapa: 'Etapas', pas: 'PAS', cargo: 'Cargos', otro: 'Otros' };
   $('#p-grupo').innerHTML = '<option value="">Todos los grupos</option><option value="-">Sin ningún grupo</option>' +
@@ -46,7 +57,7 @@ function pintarPersonal() {
     filas.map(p => `<tr class="${p.activo ? '' : 'inactivo'}">
       <td>${esc(p.nombre)}${p.rol === 'orientacion' ? ' <span class="chip">Rol Orientación</span>' : ''}${p.activo ? '' : ' <span class="chip">Inactivo</span>'}</td>
       <td>${esc(p.email)}</td>
-      <td>${(p.grupos || []).map(k => `<span class="chip">${esc(grupos[k] || k)}</span>`).join('') || '<span class="adm-nota">Ninguno</span>'}</td>
+      <td>${gruposEnLineas(p.grupos || [])}</td>
       <td>${p.ultimo_acceso ? fecha(p.ultimo_acceso) : '<span class="nunca">Nunca</span>'}</td>
       <td>${fecha(p.alta)}</td></tr>`).join('')}</tbody>`;
 }
@@ -138,6 +149,7 @@ async function cargarListas() {
 }
 async function cargarGruposCurso() {
   const curso = Number($('#l-curso').value);
+  Object.keys(alumnadoGuardado).forEach(k => delete alumnadoGuardado[k]);
   L.grupos = [];
   if (curso) {
     const { data, error } = await sb.rpc('panel_grupos', { p_curso: curso });
@@ -252,50 +264,123 @@ async function leerListasSeneca(file) {
   }
   return grupos;
 }
-async function importarPdf(files) {
-  const pdfs = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
-  if (!pdfs.length) return aviso($('#l-msg'), 'Elige los PDF de «Lista de clase» de Séneca', false);
-  $('#l-vista').innerHTML = `<p class="adm-nota">Leyendo ${pdfs.length} PDF…</p>`;
+// Excel o CSV de Séneca (por ejemplo, el alumnado de una etapa entera): una fila por alumno/a, con una columna
+// del nombre («Alumno/a», o apellidos y nombre por separado) y otra del grupo («Unidad»)
+let xlsxPromesa = null;
+function cargarXlsx() {
+  return (xlsxPromesa ||= new Promise((res, rej) => {
+    const sc = Object.assign(document.createElement('script'), { src: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' });
+    sc.onload = () => res(window.XLSX);
+    sc.onerror = () => { xlsxPromesa = null; rej(new Error('No se pudo cargar el lector de Excel (¿sin conexión?)')); };
+    document.head.appendChild(sc);
+  }));
+}
+async function leerExcelSeneca(file) {
+  const XLSX = await cargarXlsx();
+  const libro = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const filas = XLSX.utils.sheet_to_json(libro.Sheets[libro.SheetNames[0]], { header: 1, defval: '' }).map(f => f.map(v => String(v).trim()));
+  const norm = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const iCab = filas.findIndex(f => f.some(c => /^alumno|^nombre$/.test(norm(c))) && f.some(c => /unidad|grupo/.test(norm(c))));
+  if (iCab < 0) throw new Error(`«${file.name}»: no encuentro las columnas del alumno/a y de la unidad (grupo).`);
+  const cab = filas[iCab].map(norm), col = re => cab.findIndex(c => re.test(c));
+  const cAl = col(/^alumno/), cNom = col(/^nombre$/), cAp1 = col(/primer apellido|^apellido ?1/), cAp2 = col(/segundo apellido|^apellido ?2/), cApe = col(/^apellidos$/);
+  const cUni = col(/unidad/) >= 0 ? col(/unidad/) : col(/grupo/);
+  const grupos = new Map();
+  for (const f of filas.slice(iCab + 1)) {
+    const unidad = f[cUni];
+    let nombre = cAl >= 0 ? f[cAl] : `${cApe >= 0 ? f[cApe] : [f[cAp1], f[cAp2]].filter(Boolean).join(' ')}, ${f[cNom] || ''}`;
+    nombre = normalizarNombre(nombre);
+    if (!unidad || !nombreValido(nombre)) continue;
+    const clave = limpiarGrupo(unidad).toLowerCase();   // «1ºESO A» y «1º ESO A» son el mismo grupo
+    if (!grupos.has(clave)) grupos.set(clave, { original: unidad, nombre: limpiarGrupo(unidad), etapa: etapaDe(unidad), tutor: '', alumnos: [] });
+    grupos.get(clave).alumnos.push(nombre);
+  }
+  return [...grupos.values()];
+}
+async function importarArchivos(files) {
+  const validos = [...files].filter(f => /\.(pdf|xlsx|xls|ods|csv)$/i.test(f.name));
+  if (!validos.length) return aviso($('#l-msg'), 'Elige PDF «Lista de clase» o un Excel/CSV de Séneca', false);
+  $('#l-vista').innerHTML = `<p class="adm-nota">Leyendo ${validos.length} archivo(s)…</p>`;
   try {
     const leidas = [];
-    for (const f of pdfs) leidas.push(...(await leerListasSeneca(f)));
+    for (const f of validos) leidas.push(...(await (/\.pdf$/i.test(f.name) ? leerListasSeneca(f) : leerExcelSeneca(f))));
     L.importadas = (L.importadas || []).concat(leidas);
-    pintarVistaPrevia();
+    await prepararVistaPrevia();
   } catch (e) { $('#l-vista').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+// Cada grupo leído: si ya existe en el curso, se compara con su lista (altas, bajas y reactivaciones);
+// si no, se creará nuevo. Así sirve igual al empezar el curso que para las altas y bajas de mitad de curso.
+const claveNombre = t => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').replace(/\s*,\s*/, ',').trim();
+const alumnadoGuardado = {};
+async function prepararVistaPrevia() {
+  for (const g of L.importadas || []) {
+    const ex = L.grupos.find(x => x.nombre.toLowerCase() === g.nombre.trim().toLowerCase());
+    g.existente = ex || null; g.cambios = null;
+    if (!ex) continue;
+    if (!alumnadoGuardado[ex.id]) {
+      const { data, error } = await sb.rpc('panel_alumnado', { p_grupo: ex.id });
+      if (error) throw error;
+      alumnadoGuardado[ex.id] = data;
+    }
+    const antes = alumnadoGuardado[ex.id], ahora = new Set(g.alumnos.map(claveNombre));
+    const porClave = new Map(antes.map(a => [claveNombre(a.nombre), a]));
+    g.cambios = {
+      altas: g.alumnos.filter(n => !porClave.has(claveNombre(n))),
+      reactivar: antes.filter(a => !a.activo && ahora.has(claveNombre(a.nombre))),
+      bajas: antes.filter(a => a.activo && !ahora.has(claveNombre(a.nombre))),
+    };
+  }
+  pintarVistaPrevia();
 }
 function pintarVistaPrevia() {
   const imp = L.importadas || [];
   const curso = L.cursos.find(c => String(c.id) === $('#l-curso').value);
-  if (!imp.length) { $('#l-vista').innerHTML = '<p class="err">No se ha encontrado ninguna «Lista de clase» de Séneca en esos PDF.</p>'; L.importadas = null; return; }
+  if (!imp.length) { $('#l-vista').innerHTML = '<p class="err">No se ha encontrado ninguna lista de Séneca en esos archivos.</p>'; L.importadas = null; return; }
   const nombres = imp.map(g => g.nombre.trim().toLowerCase());
   const avisos = [];
   imp.forEach((g, i) => {
     if (!g.etapa) avisos.push(`${g.nombre}: falta la etapa`);
     if (nombres.indexOf(nombres[i]) !== i) avisos.push(`${g.nombre}: está repetido en la lista`);
-    if (L.grupos.some(x => x.nombre.toLowerCase() === nombres[i])) avisos.push(`${g.nombre}: ya existe en ${curso?.nombre}`);
     if (!g.alumnos.length) avisos.push(`${g.nombre}: no se ha leído ningún alumno/a`);
   });
+  const nuevos = imp.filter(g => !g.existente), act = imp.filter(g => g.existente);
+  const n = k => act.reduce((t, g) => t + g.cambios[k].length, 0);
+  const que = g => !g.existente ? `<span class="chip">Grupo nuevo</span>`
+    : (g.cambios.altas.length + g.cambios.bajas.length + g.cambios.reactivar.length) === 0 ? '<span class="adm-nota">Sin cambios</span>'
+    : [g.cambios.altas.length && `<span class="ok">+${g.cambios.altas.length} alta(s)</span>`, g.cambios.reactivar.length && `<span class="ok">${g.cambios.reactivar.length} vuelve(n)</span>`,
+       g.cambios.bajas.length && `<span class="err">−${g.cambios.bajas.length} baja(s)</span>`].filter(Boolean).join(' ') +
+      `<details><summary class="adm-nota">Ver nombres</summary><div class="adm-nota">${[...g.cambios.altas.map(x => '+ ' + esc(x)), ...g.cambios.reactivar.map(a => '↺ ' + esc(a.nombre)), ...g.cambios.bajas.map(a => '− ' + esc(a.nombre))].join('<br>')}</div></details>`;
   $('#l-vista').innerHTML = `<div class="adm-caja">
-    <h3 class="web-t">Vista previa: ${imp.length} grupos · ${imp.reduce((n, g) => n + g.alumnos.length, 0)} alumnos/as → ${esc(curso?.nombre || '')}${curso?.activo ? ' (curso actual)' : ''}</h3>
-    <div class="adm-tabla-env"><table class="adm"><thead><tr><th>En Séneca</th><th>Nombre del grupo</th><th>Etapa</th><th>Tutor/a</th><th>Alumnado</th><th></th></tr></thead><tbody>${
+    <h3 class="web-t">Vista previa → ${esc(curso?.nombre || '')}${curso?.activo ? ' (curso actual)' : ''}: ${nuevos.length} grupo(s) nuevo(s), ${act.length} para actualizar</h3>
+    <div class="adm-tabla-env"><table class="adm"><thead><tr><th>En Séneca</th><th>Nombre del grupo</th><th>Etapa</th><th>Tutor/a</th><th>Alumnado</th><th>Qué se hará</th><th></th></tr></thead><tbody>${
       imp.map((g, i) => `<tr><td>${esc(g.original)}</td><td><input data-i="${i}" data-k="nombre" value="${esc(g.nombre)}"></td>
-        <td><select data-i="${i}" data-k="etapa">${opcionesEtapa(g.etapa)}</select></td><td>${esc(g.tutor || '—')}</td>
-        <td title="${esc(g.alumnos.slice(0, 5).join(' · '))}…">${g.alumnos.length}</td>
+        <td>${g.existente ? esc(g.existente.etapa) : `<select data-i="${i}" data-k="etapa">${opcionesEtapa(g.etapa)}</select>`}</td><td>${esc(g.tutor || '—')}</td>
+        <td>${g.alumnos.length}</td><td>${que(g)}</td>
         <td><button class="btn-s peligro" type="button" data-quitar-imp="${i}">Quitar</button></td></tr>`).join('')}</tbody></table></div>
     ${avisos.length ? `<p class="err">Revisa antes de guardar: ${avisos.map(esc).join(' · ')}</p>` : ''}
+    ${n('bajas') ? `<p class="adm-nota">Las bajas no borran nada: el alumno/a deja de salir en las webs y lo que ya tenga guardado se conserva. Si Séneca no trae a alguien por error, quita ese grupo de la lista.</p>` : ''}
     <div class="adm-barra" style="margin:12px 0 0">
-      <button class="btn-s pri" type="button" id="l-guardar-imp" ${avisos.length ? 'disabled' : ''}>Guardar ${imp.length} grupos en ${esc(curso?.nombre || '')}</button>
+      <button class="btn-s pri" type="button" id="l-guardar-imp" ${avisos.length ? 'disabled' : ''}>Guardar: ${nuevos.length} grupo(s) nuevo(s) · ${n('altas') + n('reactivar')} alta(s) · ${n('bajas')} baja(s)</button>
       <button class="btn-s" type="button" id="l-cancelar-imp">Cancelar</button>
-      <label class="btn-s" for="l-pdf" style="cursor:pointer">Añadir más PDF</label>
+      <label class="btn-s" for="l-pdf" style="cursor:pointer">Añadir más archivos</label>
     </div></div>`;
 }
 async function guardarImportacion() {
-  const curso = Number($('#l-curso').value);
-  const grupos = L.importadas.map(g => ({ nombre: g.nombre.trim(), etapa: g.etapa, tutor: g.tutor, alumnos: g.alumnos }));
-  if (await llamar('panel_importar_grupos', { p_curso: curso, p_grupos: grupos }, `${grupos.length} grupos guardados`)) {
-    L.importadas = null; $('#l-vista').innerHTML = '';
-    await cargarListas();
+  const curso = Number($('#l-curso').value), imp = L.importadas;
+  const nuevos = imp.filter(g => !g.existente).map(g => ({ nombre: g.nombre.trim(), etapa: g.etapa, tutor: g.tutor, alumnos: g.alumnos }));
+  $('#l-guardar-imp').disabled = true;
+  if (nuevos.length && !(await llamar('panel_importar_grupos', { p_curso: curso, p_grupos: nuevos }))) { $('#l-guardar-imp').disabled = false; return; }
+  let hechos = 0;
+  for (const g of imp.filter(x => x.existente)) {
+    for (const nombre of g.cambios.altas) if (await llamar('panel_alta_alumno', { p_grupo: g.existente.id, p_nombre: nombre })) hechos++;
+    for (const a of g.cambios.reactivar) if (await llamar('panel_cambiar_alumno', { p_id: a.id, p_nombre: null, p_activo: true, p_grupo: null })) hechos++;
+    for (const a of g.cambios.bajas) if (await llamar('panel_cambiar_alumno', { p_id: a.id, p_nombre: null, p_activo: false, p_grupo: null })) hechos++;
+    delete alumnadoGuardado[g.existente.id];
   }
+  aviso($('#l-msg'), `Guardado: ${nuevos.length} grupo(s) nuevo(s) y ${hechos} alta(s) o baja(s)`);
+  L.importadas = null; $('#l-vista').innerHTML = '';
+  await cargarListas();
 }
 
 /* ---------- Tutorías ---------- */
@@ -320,27 +405,13 @@ async function cambiarTutor(sel) {
   aviso($('#t-msg'), 'Tutoría actualizada en todas las webs');
 }
 
-/* ---------- Orientación ---------- */
+/* ---------- Orientación (niveles, dentro de «Quién puede hacer qué») ---------- */
 const QUIEN = {
   tutor: 'Tutores (fichas de su grupo)',
   equipo_docente: 'Equipo docente (fichas del alumnado al que da clase, según Horarios)',
   etapa: 'Claustro de la etapa (fichas de su etapa)',
 };
-async function cargarOrientacion() {
-  const [{ data, error }, { data: quien }] = await Promise.all([
-    sb.from('orientacion_acceso').select('*').order('orden'),
-    sb.rpc('panel_quien_hace_que'),
-  ]);
-  if (error) throw error;
-  const personasDe = q => (quien || []).find(r => r.web === 'Orientación' && r.quien === (QUIEN[q] ? null : (grupos[q] || q)))?.personas;
-  $('#t-orientacion').innerHTML = `<thead><tr><th>Quién</th><th>Nivel</th><th>Personas ahora</th></tr></thead><tbody>${
-    data.map(r => `<tr><td>${esc(QUIEN[r.quien] || (grupos[r.quien] || r.quien) + ' (todas las fichas)')}</td>
-      <td><select data-quien="${esc(r.quien)}">${['editar', 'ver', 'medidas', 'nada'].map(n =>
-        `<option value="${n}" ${n === r.nivel ? 'selected' : ''}>${{ editar: 'Editar', ver: 'Ver', medidas: 'Medidas', nada: 'Nada' }[n]}</option>`).join('')}</select></td>
-      <td>${esc(personasDe(r.quien) || (r.quien === 'tutor' ? 'Los tutores de cada grupo (ver «Tutorías»)' : r.quien === 'equipo_docente' ? 'Profesorado enlazado con Horarios' : r.quien === 'etapa' ? 'Según el grupo de etapa de cada docente' : '—'))}</td></tr>`).join('')}
-    <tr><td>Rol «Orientación» en la lista del personal</td><td>Editar</td><td>${esc((quien || []).find(r => r.quien.startsWith('Rol'))?.personas || '—')}</td></tr></tbody>`;
-}
-async function cambiarNivel(sel, msg = $('#o-msg')) {
+async function cambiarNivel(sel, msg = $('#q-msg')) {
   const { data: { user } } = await sb.auth.getUser();
   const { error } = await sb.from('orientacion_acceso')
     .update({ nivel: sel.value, cambiado: new Date().toISOString(), cambiado_por: user?.email }).eq('quien', sel.dataset.quien);
@@ -507,9 +578,12 @@ async function cambiarRol(sel) {
 }
 
 /* ---------- Pestañas y arranque ---------- */
-const CARGAS = { personal: cargarPersonal, cuentas: cargarCuentas, listas: cargarListas, tutorias: cargarTutorias, orientacion: cargarOrientacion, quien: cargarQuien };
+const CARGAS = { personal: cargarPersonal, cuentas: cargarCuentas, listas: cargarListas, tutorias: cargarTutorias, orientacion: cargarQuien, quien: cargarQuien };
+const PESTANA = { cuentas: 'personal', orientacion: 'quien' };   // apartados que van dentro de otra pestaña
 async function mostrar(p) {
-  document.querySelectorAll('.adm-pest [data-p]').forEach(b => b.setAttribute('aria-selected', b.dataset.p === p));
+  if (p === 'orientacion') p = 'quien';   // los niveles de Orientación están en «Quién puede hacer qué»
+  document.querySelectorAll('.adm-pest [data-p]').forEach(b => b.setAttribute('aria-selected', b.dataset.p === (PESTANA[p] || p)));
+  document.querySelectorAll('.adm-sub [data-p]').forEach(b => b.classList.toggle('pri', b.dataset.p === p));
   document.querySelectorAll('[data-panel]').forEach(d => { d.hidden = d.dataset.panel !== p; d.classList.toggle('imprimir', d.dataset.panel === p); });
   history.replaceState(null, '', '#' + p);
   try { await CARGAS[p](); } catch (e) { $(`[data-panel="${p}"]`).insertAdjacentHTML('afterbegin', `<p class="err">No se han podido cargar los datos: ${esc(e.message)}</p>`); }
@@ -537,7 +611,7 @@ async function mostrar(p) {
   $('#app').hidden = false;
   await cargarPersonal().catch(e => $('#t-personal').outerHTML = `<p class="err">${esc(e.message)}</p>`);
 
-  document.querySelectorAll('.adm-pest [data-p]').forEach(b => b.onclick = () => mostrar(b.dataset.p));
+  document.querySelectorAll('.adm-pest [data-p], .adm-sub [data-p]').forEach(b => b.onclick = () => mostrar(b.dataset.p));
   ['#p-buscar', '#p-grupo', '#p-acceso', '#p-inactivos'].forEach(s => $(s).addEventListener('input', pintarPersonal));
   $('#c-historial').onchange = pintarCuentas;
   $('#c-nueva').onclick = nuevaCuenta;
@@ -550,7 +624,7 @@ async function mostrar(p) {
   $('#l-nuevo').onclick = nuevoCurso;
   $('#l-curso').onchange = () => { L.importadas = null; $('#l-vista').innerHTML = ''; cargarGruposCurso(); };
   $('#l-grupo').onchange = pintarGrupo;
-  $('#l-pdf').onchange = e => { importarPdf(e.target.files); e.target.value = ''; };
+  $('#l-pdf').onchange = e => { importarArchivos(e.target.files); e.target.value = ''; };
   $('#t-cursos').addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.activar) activarCurso(Number(b.dataset.activar));
@@ -559,9 +633,9 @@ async function mostrar(p) {
   $('#l-vista').addEventListener('input', e => {
     const i = e.target.dataset.i; if (i == null) return;
     L.importadas[Number(i)][e.target.dataset.k] = e.target.value;
-    if (e.target.tagName === 'SELECT' || e.type === 'change') pintarVistaPrevia();
+    if (e.target.tagName === 'SELECT') pintarVistaPrevia();
   });
-  $('#l-vista').addEventListener('change', e => e.target.dataset.k === 'nombre' && pintarVistaPrevia());
+  $('#l-vista').addEventListener('change', e => e.target.dataset.k === 'nombre' && prepararVistaPrevia().catch(err => aviso($('#l-msg'), err.message, false)));
   $('#l-vista').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.quitarImp) { L.importadas.splice(Number(b.dataset.quitarImp), 1); L.importadas.length ? pintarVistaPrevia() : ($('#l-vista').innerHTML = '', L.importadas = null); }
@@ -604,7 +678,6 @@ async function mostrar(p) {
     if (await llamar('panel_cambiar_alumno', { p_id: a.id, p_nombre: null, p_activo: null, p_grupo: destino.id }, `Ahora está en ${destino.nombre}`)) await cargarGruposCurso();
   });
   $('#t-tutorias').addEventListener('change', e => e.target.matches('select[data-grupo]') && cambiarTutor(e.target));
-  $('#t-orientacion').addEventListener('change', e => e.target.matches('select[data-quien]') && cambiarNivel(e.target));
   $('#q-imprimir').onclick = () => window.print();
   document.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => {
     modoQuien = b.dataset.modo;

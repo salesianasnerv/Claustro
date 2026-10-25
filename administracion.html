@@ -62,6 +62,10 @@
     .l-grupo-form input, .l-grupo-form select, #l-vista input, #l-vista select, .adm-barra select {
       font: inherit; padding: 6px 10px; border: 1px solid var(--borde); border-radius: 8px; background: var(--bg); color: var(--texto); }
     #l-vista { margin-bottom: 16px; }
+    .adm-sub { margin: -4px 0 14px; }
+    .g-linea { white-space: nowrap; line-height: 1.5; }
+    .g-tipo { display: inline-block; min-width: 54px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); }
+    #l-vista details summary { cursor: pointer; }
     table.adm select[data-mover] { width: auto; min-width: 0; }
     #l-vista .adm-caja { box-shadow: none; background: var(--bg); }
     .tag-actual { display: inline-block; font-size: .75rem; font-weight: 700; color: #fff; background: var(--verde-oscuro, #6b7d00); border-radius: 999px; padding: 2px 10px; }
@@ -118,14 +122,13 @@
     <section id="app" hidden>
       <nav class="adm-pest" role="tablist">
         <button type="button" role="tab" data-p="personal" aria-selected="true">Personal</button>
-        <button type="button" role="tab" data-p="cuentas">Cuentas compartidas</button>
         <button type="button" role="tab" data-p="listas">Cursos y listas</button>
         <button type="button" role="tab" data-p="tutorias">Tutorías</button>
-        <button type="button" role="tab" data-p="orientacion">Orientación</button>
         <button type="button" role="tab" data-p="quien">Quién puede hacer qué</button>
       </nav>
 
       <div class="adm-caja" data-panel="personal">
+        <div class="adm-barra adm-sub"><button class="btn-s pri" type="button" data-p="personal">Cuentas personales</button><button class="btn-s" type="button" data-p="cuentas">Cuentas compartidas</button></div>
         <p class="adm-nota">La lista se copia cada noche del grupo de Microsoft 365 del colegio: las altas y bajas se hacen en ese grupo, no aquí. Sirve para ver quién tiene acceso, a qué grupos pertenece y cuándo entró por última vez en las webs.</p>
         <div class="adm-barra">
           <input type="search" id="p-buscar" placeholder="Buscar nombre o correo…">
@@ -143,6 +146,7 @@
       </div>
 
       <div class="adm-caja" data-panel="cuentas" hidden>
+        <div class="adm-barra adm-sub"><button class="btn-s pri" type="button" data-p="personal">Cuentas personales</button><button class="btn-s" type="button" data-p="cuentas">Cuentas compartidas</button></div>
         <p class="adm-nota">Quién usa cada cuenta compartida y desde cuándo. Cuando cambie la persona, pulsa «Cambio de persona»: se cierra la fila actual con la fecha de hoy y se abre otra (el historial no se borra). Recuerda cambiar la contraseña ese día.</p>
         <div class="adm-barra">
           <button class="btn-s pri" id="c-nueva" type="button">Añadir cuenta</button>
@@ -165,10 +169,10 @@
         <div class="adm-barra">
           <select id="l-curso" aria-label="Curso"></select>
           <select id="l-grupo" aria-label="Grupo"></select>
-          <label class="btn-s" for="l-pdf" style="cursor:pointer">Importar listas de Séneca (PDF)</label>
-          <input type="file" id="l-pdf" accept="application/pdf,.pdf" multiple hidden>
+          <label class="btn-s pri" for="l-pdf" style="cursor:pointer">Importar listas de Séneca</label>
+          <input type="file" id="l-pdf" accept=".pdf,.xlsx,.xls,.ods,.csv" multiple hidden>
         </div>
-        <p class="adm-nota">Para importar: en Séneca, «Lista de clase» de cada grupo, en PDF (se pueden elegir varios a la vez, de cualquier etapa). Antes de guardar se ve una vista previa para revisar nombres y etapas.</p>
+        <p class="adm-nota"><b>Importar</b> sirve para empezar un curso y para las altas y bajas durante el curso. Vale la «Lista de clase» de Séneca en PDF, de <b>una clase</b> o de <b>la etapa completa</b> (todas sus clases en un mismo PDF), y también el Excel o CSV del alumnado de Séneca (columnas «Alumno/a» y «Unidad»). Se pueden elegir varios archivos a la vez. Antes de guardar se ve qué grupos son nuevos y, en los que ya existen, qué altas y bajas hay.<br><b>Una alta o baja suelta:</b> elige el grupo aquí al lado y usa los botones de su lista.</p>
         <div id="l-vista"></div>
         <div id="l-detalle"></div>
       </div>
@@ -177,12 +181,6 @@
         <p class="adm-nota">Tutor o tutora de cada grupo este curso. Al cambiarlo se actualiza en todas las webs (lista común de grupos, Orientación y Horarios).</p>
         <div class="adm-tabla-env"><table class="adm" id="t-tutorias"></table></div>
         <p id="t-msg"></p>
-      </div>
-
-      <div class="adm-caja" data-panel="orientacion" hidden>
-        <p class="adm-nota"><b>Editar:</b> ver y editar la ficha completa · <b>Ver:</b> ver la ficha completa (diagnóstico, historial, medidas) · <b>Medidas:</b> solo medidas y materias pendientes, sin diagnóstico · <b>Nada:</b> no ve fichas. Cada persona tiene el nivel más alto de los que le correspondan. Los cambios se aplican al momento.</p>
-        <div class="adm-tabla-env"><table class="adm" id="t-orientacion"></table></div>
-        <p id="o-msg"></p>
       </div>
 
       <div class="adm-caja" data-panel="quien" hidden>
