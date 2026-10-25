@@ -1,4 +1,4 @@
-// Panel de Administración del portal: personal, cuentas compartidas, tutorías, reglas de Orientación y
+// Panel de Administración del portal: personal, cuentas compartidas, cursos y listas de alumnado, tutorías, reglas de Orientación y
 // «quién puede hacer qué». Usa el Supabase común «Acceso Microsoft 365»; los permisos los comprueba la base de datos
 // (es_admin_panel: grupo Equipo Directivo de Microsoft 365 o permiso «administracion»).
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -111,6 +111,191 @@ function descargarCuentas() {
   a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
   a.download = `Cuentas compartidas ${hoy()}.csv`;
   a.click();
+}
+
+/* ---------- Cursos y listas ---------- */
+const ETAPAS = ['Infantil', 'Primaria', 'ESO', 'Bachillerato', 'CCFF'];
+const etapaDe = n => /bach/i.test(n) ? 'Bachillerato' : /infantil/i.test(n) ? 'Infantil' : /primaria|epo/i.test(n) ? 'Primaria'
+  : /eso/i.test(n) ? 'ESO' : /cfg|ccff|fp|ciclo|grado/i.test(n) ? 'CCFF' : '';
+const L = { cursos: [], grupos: [], importadas: null };
+const opcionesEtapa = sel => `<option value="">Elige etapa…</option>` + ETAPAS.map(e => `<option ${e === sel ? 'selected' : ''}>${e}</option>`).join('');
+const nombreValido = n => /^[^,]+,[^,]+$/.test(n.trim());
+const normalizarNombre = t => t.trim().replace(/\s+/g, ' ').replace(/\s*,\s*/, ', ');
+
+async function cargarListas() {
+  const { data, error } = await sb.rpc('panel_cursos');
+  if (error) throw error;
+  L.cursos = data;
+  $('#t-cursos').innerHTML = `<thead><tr><th>Curso</th><th>Grupos</th><th>Alumnado</th><th>Por etapa</th><th>Estado</th><th></th></tr></thead><tbody>${
+    data.map(c => `<tr><td><b>${esc(c.nombre)}</b></td><td>${c.grupos}</td><td>${c.alumnado}</td><td>${esc(c.por_etapa || '—')}</td>
+      <td>${c.activo ? '<span class="tag-actual">Actual</span>' : '<span class="tag-off">Sin activar</span>'}</td>
+      <td style="white-space:nowrap"><button class="btn-s" type="button" data-ver-curso="${c.id}">Ver listas</button>${c.activo ? '' : ` <button class="btn-s pri" type="button" data-activar="${c.id}">Activar</button>`}</td></tr>`).join('')
+    || '<tr><td colspan="6">Todavía no hay cursos.</td></tr>'}</tbody>`;
+  const previo = $('#l-curso').value;
+  $('#l-curso').innerHTML = data.map(c => `<option value="${c.id}">${esc(c.nombre)}${c.activo ? ' (actual)' : ''}</option>`).join('');
+  $('#l-curso').value = data.some(c => String(c.id) === previo) ? previo : (data.find(c => c.activo) || data[0])?.id ?? '';
+  await cargarGruposCurso();
+}
+async function cargarGruposCurso() {
+  const curso = Number($('#l-curso').value);
+  L.grupos = [];
+  if (curso) {
+    const { data, error } = await sb.rpc('panel_grupos', { p_curso: curso });
+    if (error) return aviso($('#l-msg'), 'No se han podido cargar los grupos: ' + error.message, false);
+    L.grupos = data;
+  }
+  const previo = $('#l-grupo').value;
+  $('#l-grupo').innerHTML = `<option value="">${L.grupos.length ? 'Elige un grupo…' : 'Este curso no tiene grupos'}</option>` +
+    ETAPAS.concat(['']).map(e => {
+      const gs = L.grupos.filter(g => (g.etapa || '') === e || (e === '' && !ETAPAS.includes(g.etapa)));
+      return gs.length ? `<optgroup label="${esc(e || 'Sin etapa')}">${gs.map(g => `<option value="${g.id}">${esc(g.nombre)} (${g.alumnado})</option>`).join('')}</optgroup>` : '';
+    }).join('');
+  $('#l-grupo').value = L.grupos.some(g => String(g.id) === previo) ? previo : '';
+  await pintarGrupo();
+}
+async function pintarGrupo() {
+  const g = L.grupos.find(x => String(x.id) === $('#l-grupo').value);
+  if (!g) { $('#l-detalle').innerHTML = ''; return; }
+  const { data, error } = await sb.rpc('panel_alumnado', { p_grupo: g.id });
+  if (error) { $('#l-detalle').innerHTML = `<p class="err">${esc(error.message)}</p>`; return; }
+  const activos = data.filter(a => a.activo).length;
+  const otros = L.grupos.filter(x => x.id !== g.id);
+  $('#l-detalle').innerHTML = `
+    <form class="l-grupo-form" id="l-grupo-form">
+      <label>Grupo <input name="nombre" value="${esc(g.nombre)}" required></label>
+      <label>Etapa <select name="etapa">${opcionesEtapa(g.etapa)}</select></label>
+      <button class="btn-s" type="submit">Guardar grupo</button>
+      <span class="adm-nota" style="margin:0">Tutor/a: ${esc(g.tutor || '—')}${g.tutor_email ? '' : ' (sin cuenta enlazada: elígelo en «Tutorías»)'} · ${activos} alumnos/as</span>
+    </form>
+    <div class="adm-tabla-env"><table class="adm"><thead><tr><th>Nº</th><th>Apellidos, Nombre</th><th>Estado</th><th></th></tr></thead><tbody>${
+      data.map((a, i) => `<tr class="${a.activo ? '' : 'inactivo'}"><td>${i + 1}</td><td>${esc(a.nombre)}</td><td>${a.activo ? 'Activo' : '<span class="chip">Baja</span>'}</td>
+        <td style="white-space:nowrap"><button class="btn-s" type="button" data-renombrar="${a.id}">Cambiar nombre</button>
+        ${otros.length ? `<select data-mover="${a.id}" aria-label="Pasar a otro grupo"><option value="">Pasar a…</option>${otros.map(o => `<option value="${o.id}">${esc(o.nombre)}</option>`).join('')}</select>` : ''}
+        <button class="btn-s ${a.activo ? 'peligro' : ''}" type="button" data-baja="${a.id}" data-activo="${a.activo}">${a.activo ? 'Dar de baja' : 'Reactivar'}</button></td></tr>`).join('')
+      || '<tr><td colspan="4">Sin alumnado.</td></tr>'}</tbody></table></div>
+    <form class="l-grupo-form" id="l-alta" style="margin-top:12px">
+      <label>Alta <input name="nombre" placeholder="Apellidos, Nombre" required></label>
+      <button class="btn-s pri" type="submit">Añadir a ${esc(g.nombre)}</button>
+    </form>`;
+  $('#l-detalle').dataset.alumnado = JSON.stringify(data);
+}
+async function llamar(fn, args, ok) {
+  const { error } = await sb.rpc(fn, args);
+  if (error) { aviso($('#l-msg'), 'No se ha guardado: ' + error.message, false); return false; }
+  if (ok) aviso($('#l-msg'), ok);
+  return true;
+}
+async function nuevoCurso() {
+  const ult = L.cursos.map(c => parseInt(c.nombre, 10)).filter(Boolean).sort().pop() || new Date().getFullYear() - 1;
+  const nombre = prompt('Nombre del curso nuevo (se crea sin activar):', `${ult + 1}-${ult + 2}`);
+  if (!nombre) return;
+  if (await llamar('panel_crear_curso', { p_nombre: nombre.trim() }, `Curso ${nombre.trim()} creado sin activar. Ahora importa sus listas.`)) {
+    await cargarListas();
+    const c = L.cursos.find(x => x.nombre === nombre.trim());
+    if (c) { $('#l-curso').value = c.id; await cargarGruposCurso(); }
+  }
+}
+async function activarCurso(id) {
+  const c = L.cursos.find(x => x.id === id);
+  if (!confirm(`¿Activar ${c.nombre}?\n\nTodas las webs (Control de baños, Distribución del aula, Orientación…) pasarán a usar sus listas (${c.grupos} grupos, ${c.alumnado} alumnos/as). El curso actual queda guardado y se puede volver a activar.`)) return;
+  if (await llamar('panel_activar_curso', { p_id: id }, `Curso actual: ${c.nombre}`)) await cargarListas();
+}
+
+// Lector de PDF (solo se descarga al importar)
+let pdfjsPromesa = null;
+function cargarPdfJs() {
+  return (pdfjsPromesa ||= new Promise((res, rej) => {
+    const base = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+    const sc = Object.assign(document.createElement('script'), { src: base + 'pdf.min.js' });
+    sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js'; res(window.pdfjsLib); };
+    sc.onerror = () => { pdfjsPromesa = null; rej(new Error('No se pudo cargar el lector de PDF (¿sin conexión?)')); };
+    document.head.appendChild(sc);
+  }));
+}
+// Nombres de Séneca → nombres más claros (se pueden corregir en la vista previa)
+const NOMBRES_SENECA = { '1ºABachSoc': '1º Bach A', '1ºBBachCi': '1º Bach B', '2º Bach HS': '2º Bach A', '2º BACH CyT': '2º Bach B' };
+const limpiarGrupo = s => NOMBRES_SENECA[s] ||
+  s.replace(/º\s*/, 'º ').replace(/\bESO\s*([A-Z])$/i, 'ESO $1').replace(/\bBACH\b/i, 'Bach').replace(/\s+/g, ' ').trim();
+// PDF «Lista de clase» de Séneca: una clase por página (la misma lectura que usaba Control de baños)
+async function leerListasSeneca(file) {
+  const lib = await cargarPdfJs();
+  const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const grupos = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    const filas = [];
+    for (const it of tc.items) {
+      if (!it.str.trim() || it.transform[1] || it.transform[2]) continue;   // vacío o texto girado del margen
+      const y = it.transform[5];
+      let f = filas.find(f => Math.abs(f.y - y) <= 2);
+      if (!f) filas.push((f = { y, items: [] }));
+      f.items.push({ x: it.transform[4], s: it.str });
+    }
+    const lineas = filas.sort((a, b) => b.y - a.y)
+      .map(f => f.items.sort((a, b) => a.x - b.x).map(i => i.s).join(' ').replace(/\s+/g, ' ').trim());
+    const texto = lineas.join('\n');
+    const m = texto.match(/LISTA DE CLASE DE\s+(.+?)\s*\(/);
+    if (!m) continue;
+    const tutor = (texto.match(/TUTOR\/A\s*:\s*(.+)/) || [])[1]?.trim() || '';
+    const alumnos = [];
+    let dentro = false;
+    for (const l of lineas) {
+      if (/N[º°o]\s*orden/i.test(l)) { dentro = true; continue; }
+      if (!dentro) continue;
+      if (/^\S+,\s*\d{2}\/\d{2}\/\d{4}$|^P[áa]g\./.test(l)) break;   // "Sevilla, 13/09/2026" o "Pág. 1 de 4"
+      const mm = l.match(/^(\d{1,2})\s*(.+,.+)$/) || l.match(/^(.+,.+?)\s*(\d{1,2})$/);
+      if (mm) alumnos.push((/^\d/.test(mm[1]) ? mm[2] : mm[1]).trim());
+    }
+    const original = m[1].trim(), previa = grupos.find(g => g.original === original);   // clase que sigue en otra página
+    if (previa) previa.alumnos.push(...alumnos);
+    else grupos.push({ original, nombre: limpiarGrupo(original), etapa: etapaDe(original), tutor, alumnos });
+  }
+  return grupos;
+}
+async function importarPdf(files) {
+  const pdfs = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  if (!pdfs.length) return aviso($('#l-msg'), 'Elige los PDF de «Lista de clase» de Séneca', false);
+  $('#l-vista').innerHTML = `<p class="adm-nota">Leyendo ${pdfs.length} PDF…</p>`;
+  try {
+    const leidas = [];
+    for (const f of pdfs) leidas.push(...(await leerListasSeneca(f)));
+    L.importadas = (L.importadas || []).concat(leidas);
+    pintarVistaPrevia();
+  } catch (e) { $('#l-vista').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+function pintarVistaPrevia() {
+  const imp = L.importadas || [];
+  const curso = L.cursos.find(c => String(c.id) === $('#l-curso').value);
+  if (!imp.length) { $('#l-vista').innerHTML = '<p class="err">No se ha encontrado ninguna «Lista de clase» de Séneca en esos PDF.</p>'; L.importadas = null; return; }
+  const nombres = imp.map(g => g.nombre.trim().toLowerCase());
+  const avisos = [];
+  imp.forEach((g, i) => {
+    if (!g.etapa) avisos.push(`${g.nombre}: falta la etapa`);
+    if (nombres.indexOf(nombres[i]) !== i) avisos.push(`${g.nombre}: está repetido en la lista`);
+    if (L.grupos.some(x => x.nombre.toLowerCase() === nombres[i])) avisos.push(`${g.nombre}: ya existe en ${curso?.nombre}`);
+    if (!g.alumnos.length) avisos.push(`${g.nombre}: no se ha leído ningún alumno/a`);
+  });
+  $('#l-vista').innerHTML = `<div class="adm-caja">
+    <h3 class="web-t">Vista previa: ${imp.length} grupos · ${imp.reduce((n, g) => n + g.alumnos.length, 0)} alumnos/as → ${esc(curso?.nombre || '')}${curso?.activo ? ' (curso actual)' : ''}</h3>
+    <div class="adm-tabla-env"><table class="adm"><thead><tr><th>En Séneca</th><th>Nombre del grupo</th><th>Etapa</th><th>Tutor/a</th><th>Alumnado</th><th></th></tr></thead><tbody>${
+      imp.map((g, i) => `<tr><td>${esc(g.original)}</td><td><input data-i="${i}" data-k="nombre" value="${esc(g.nombre)}"></td>
+        <td><select data-i="${i}" data-k="etapa">${opcionesEtapa(g.etapa)}</select></td><td>${esc(g.tutor || '—')}</td>
+        <td title="${esc(g.alumnos.slice(0, 5).join(' · '))}…">${g.alumnos.length}</td>
+        <td><button class="btn-s peligro" type="button" data-quitar-imp="${i}">Quitar</button></td></tr>`).join('')}</tbody></table></div>
+    ${avisos.length ? `<p class="err">Revisa antes de guardar: ${avisos.map(esc).join(' · ')}</p>` : ''}
+    <div class="adm-barra" style="margin:12px 0 0">
+      <button class="btn-s pri" type="button" id="l-guardar-imp" ${avisos.length ? 'disabled' : ''}>Guardar ${imp.length} grupos en ${esc(curso?.nombre || '')}</button>
+      <button class="btn-s" type="button" id="l-cancelar-imp">Cancelar</button>
+      <label class="btn-s" for="l-pdf" style="cursor:pointer">Añadir más PDF</label>
+    </div></div>`;
+}
+async function guardarImportacion() {
+  const curso = Number($('#l-curso').value);
+  const grupos = L.importadas.map(g => ({ nombre: g.nombre.trim(), etapa: g.etapa, tutor: g.tutor, alumnos: g.alumnos }));
+  if (await llamar('panel_importar_grupos', { p_curso: curso, p_grupos: grupos }, `${grupos.length} grupos guardados`)) {
+    L.importadas = null; $('#l-vista').innerHTML = '';
+    await cargarListas();
+  }
 }
 
 /* ---------- Tutorías ---------- */
@@ -322,7 +507,7 @@ async function cambiarRol(sel) {
 }
 
 /* ---------- Pestañas y arranque ---------- */
-const CARGAS = { personal: cargarPersonal, cuentas: cargarCuentas, tutorias: cargarTutorias, orientacion: cargarOrientacion, quien: cargarQuien };
+const CARGAS = { personal: cargarPersonal, cuentas: cargarCuentas, listas: cargarListas, tutorias: cargarTutorias, orientacion: cargarOrientacion, quien: cargarQuien };
 async function mostrar(p) {
   document.querySelectorAll('.adm-pest [data-p]').forEach(b => b.setAttribute('aria-selected', b.dataset.p === p));
   document.querySelectorAll('[data-panel]').forEach(d => { d.hidden = d.dataset.panel !== p; d.classList.toggle('imprimir', d.dataset.panel === p); });
@@ -361,6 +546,62 @@ async function mostrar(p) {
   $('#t-cuentas').addEventListener('click', e => {
     if (e.target.dataset.cambio) cambioDePersona(Number(e.target.dataset.cambio));
     if (e.target.dataset.borrar) borrarCuenta(Number(e.target.dataset.borrar));
+  });
+  $('#l-nuevo').onclick = nuevoCurso;
+  $('#l-curso').onchange = () => { L.importadas = null; $('#l-vista').innerHTML = ''; cargarGruposCurso(); };
+  $('#l-grupo').onchange = pintarGrupo;
+  $('#l-pdf').onchange = e => { importarPdf(e.target.files); e.target.value = ''; };
+  $('#t-cursos').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.activar) activarCurso(Number(b.dataset.activar));
+    if (b.dataset.verCurso) { $('#l-curso').value = b.dataset.verCurso; L.importadas = null; $('#l-vista').innerHTML = ''; await cargarGruposCurso(); $('#l-curso').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  });
+  $('#l-vista').addEventListener('input', e => {
+    const i = e.target.dataset.i; if (i == null) return;
+    L.importadas[Number(i)][e.target.dataset.k] = e.target.value;
+    if (e.target.tagName === 'SELECT' || e.type === 'change') pintarVistaPrevia();
+  });
+  $('#l-vista').addEventListener('change', e => e.target.dataset.k === 'nombre' && pintarVistaPrevia());
+  $('#l-vista').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.quitarImp) { L.importadas.splice(Number(b.dataset.quitarImp), 1); L.importadas.length ? pintarVistaPrevia() : ($('#l-vista').innerHTML = '', L.importadas = null); }
+    if (b.id === 'l-cancelar-imp') { L.importadas = null; $('#l-vista').innerHTML = ''; }
+    if (b.id === 'l-guardar-imp') guardarImportacion();
+  });
+  $('#l-detalle').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, g = Number($('#l-grupo').value);
+    if (f.id === 'l-grupo-form') {
+      if (await llamar('panel_cambiar_grupo', { p_id: g, p_nombre: f.nombre.value, p_etapa: f.etapa.value }, 'Grupo guardado')) await cargarListas();
+    }
+    if (f.id === 'l-alta') {
+      const nombre = normalizarNombre(f.nombre.value);
+      if (!nombreValido(nombre)) return aviso($('#l-msg'), 'Escríbelo así: Apellidos, Nombre', false);
+      if (await llamar('panel_alta_alumno', { p_grupo: g, p_nombre: nombre }, `${nombre}: alta hecha`)) await cargarGruposCurso();
+    }
+  });
+  $('#l-detalle').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const al = JSON.parse($('#l-detalle').dataset.alumnado || '[]');
+    if (b.dataset.renombrar) {
+      const a = al.find(x => x.id === Number(b.dataset.renombrar));
+      const nuevo = prompt('Apellidos, Nombre:', a.nombre);
+      if (!nuevo || normalizarNombre(nuevo) === a.nombre) return;
+      if (!nombreValido(nuevo)) return aviso($('#l-msg'), 'Escríbelo así: Apellidos, Nombre', false);
+      if (await llamar('panel_cambiar_alumno', { p_id: a.id, p_nombre: normalizarNombre(nuevo), p_activo: null, p_grupo: null }, 'Nombre cambiado')) await pintarGrupo();
+    }
+    if (b.dataset.baja) {
+      const a = al.find(x => x.id === Number(b.dataset.baja)), activo = b.dataset.activo !== 'true';
+      if (!activo && !confirm(`¿Dar de baja a ${a.nombre}?\n\nDejará de salir en las webs. Lo que ya tenga guardado (salidas, distribuciones…) se conserva.`)) return;
+      if (await llamar('panel_cambiar_alumno', { p_id: a.id, p_nombre: null, p_activo: activo, p_grupo: null }, activo ? 'Reactivado/a' : 'Baja hecha')) await cargarGruposCurso();
+    }
+  });
+  $('#l-detalle').addEventListener('change', async e => {
+    const s = e.target; if (!s.dataset.mover || !s.value) return;
+    const al = JSON.parse($('#l-detalle').dataset.alumnado || '[]'), a = al.find(x => x.id === Number(s.dataset.mover));
+    const destino = L.grupos.find(g => String(g.id) === s.value);
+    if (!confirm(`¿Pasar a ${a.nombre} a ${destino.nombre}?`)) { s.value = ''; return; }
+    if (await llamar('panel_cambiar_alumno', { p_id: a.id, p_nombre: null, p_activo: null, p_grupo: destino.id }, `Ahora está en ${destino.nombre}`)) await cargarGruposCurso();
   });
   $('#t-tutorias').addEventListener('change', e => e.target.matches('select[data-grupo]') && cambiarTutor(e.target));
   $('#t-orientacion').addEventListener('change', e => e.target.matches('select[data-quien]') && cambiarNivel(e.target));

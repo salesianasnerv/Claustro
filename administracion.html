@@ -58,6 +58,14 @@
     .q-x { border: 0; background: none; color: var(--azul); font-weight: 700; font-size: 1rem; line-height: 1; cursor: pointer; padding: 0 2px; }
     .q-x:hover { color: #c0392b; }
     .q-matriz { max-height: 75vh; overflow: auto; }
+    .l-grupo-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0 12px; }
+    .l-grupo-form input, .l-grupo-form select, #l-vista input, #l-vista select, .adm-barra select {
+      font: inherit; padding: 6px 10px; border: 1px solid var(--borde); border-radius: 8px; background: var(--bg); color: var(--texto); }
+    #l-vista { margin-bottom: 16px; }
+    table.adm select[data-mover] { width: auto; min-width: 0; }
+    #l-vista .adm-caja { box-shadow: none; background: var(--bg); }
+    .tag-actual { display: inline-block; font-size: .75rem; font-weight: 700; color: #fff; background: var(--verde-oscuro, #6b7d00); border-radius: 999px; padding: 2px 10px; }
+    .tag-off { display: inline-block; font-size: .75rem; font-weight: 600; color: var(--suave); background: var(--azul-bg); border-radius: 999px; padding: 2px 10px; }
     .q-matriz table.adm th, .q-matriz table.adm td { border-right: 1px solid var(--borde); }
     .q-matriz thead th { position: sticky; top: 0; background: var(--panel); z-index: 2; text-align: center; white-space: normal; min-width: 110px; }
     .q-matriz tbody th { position: sticky; left: 0; background: var(--panel); z-index: 1; text-align: left; font-size: .88rem;
@@ -111,6 +119,7 @@
       <nav class="adm-pest" role="tablist">
         <button type="button" role="tab" data-p="personal" aria-selected="true">Personal</button>
         <button type="button" role="tab" data-p="cuentas">Cuentas compartidas</button>
+        <button type="button" role="tab" data-p="listas">Cursos y listas</button>
         <button type="button" role="tab" data-p="tutorias">Tutorías</button>
         <button type="button" role="tab" data-p="orientacion">Orientación</button>
         <button type="button" role="tab" data-p="quien">Quién puede hacer qué</button>
@@ -142,6 +151,26 @@
           <span id="c-msg"></span>
         </div>
         <div class="adm-tabla-env"><table class="adm" id="t-cuentas"></table></div>
+      </div>
+
+      <div class="adm-caja" data-panel="listas" hidden>
+        <p class="adm-nota">Cursos y listas de alumnado de todas las etapas. Lo que se carga aquí lo usan al momento Control de baños, Distribución del aula y Orientación. Un curso nuevo se crea <b>sin activar</b>: se pueden ir cargando sus listas sin que cambie nada; al pulsar «Activar», todas las webs pasan a ese curso. Los tutores se eligen en la pestaña «Tutorías».</p>
+        <div class="adm-barra">
+          <button class="btn-s pri" id="l-nuevo" type="button">Crear curso nuevo</button>
+          <span id="l-msg"></span>
+        </div>
+        <div class="adm-tabla-env"><table class="adm" id="t-cursos"></table></div>
+
+        <h3 class="web-t" style="margin-top:26px">Listas de un curso</h3>
+        <div class="adm-barra">
+          <select id="l-curso" aria-label="Curso"></select>
+          <select id="l-grupo" aria-label="Grupo"></select>
+          <label class="btn-s" for="l-pdf" style="cursor:pointer">Importar listas de Séneca (PDF)</label>
+          <input type="file" id="l-pdf" accept="application/pdf,.pdf" multiple hidden>
+        </div>
+        <p class="adm-nota">Para importar: en Séneca, «Lista de clase» de cada grupo, en PDF (se pueden elegir varios a la vez, de cualquier etapa). Antes de guardar se ve una vista previa para revisar nombres y etapas.</p>
+        <div id="l-vista"></div>
+        <div id="l-detalle"></div>
       </div>
 
       <div class="adm-caja" data-panel="tutorias" hidden>
