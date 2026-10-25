@@ -181,7 +181,7 @@ const WEBS = [
 const NIVELES = { editar: 'Editar', ver: 'Ver', medidas: 'Medidas', nada: 'Nada' };
 let abiertas = new Set();
 
-let modoQuien = 'persona';
+let modoQuien = 'web';
 async function cargarQuien() {
   const [{ data: quien, error }, { data: permisos, error: e2 }, { data: reglas }, { data: tutorias }] = await Promise.all([
     sb.rpc('panel_quien_hace_que'), sb.rpc('panel_permisos'), sb.from('orientacion_acceso').select('*').order('orden'), sb.rpc('panel_tutorias')]);
@@ -221,69 +221,83 @@ async function cargarQuien() {
         </tbody></table></div></details>`;
     }).join('') + '<p id="q-msg"></p>';
 }
-// Vista por persona: qué puede hacer cada una. Lo que viene de un grupo de Microsoft 365 (gris) no se cambia aquí;
-// los permisos asignados en el panel (azul) se pueden quitar, cambiar de rol o añadir.
-const ETIQUETA_PERMISO = Object.fromEntries(WEBS.filter(w => w.permiso).map(w => [w.permiso, w.permiso === 'orientacion_rol' ? 'Orientación: editar todas las fichas (rol)' : `${w.web}: ${w.accion.charAt(0).toLowerCase() + w.accion.slice(1)}`]));
-const ROLES_INC = WEBS.find(w => w.permiso === 'incidencias').roles;
+// Vista por persona: una fila por persona y una columna por web. En cada casilla, en gris, lo que le viene de sus
+// grupos de Microsoft 365 o de su tutoría (se cambia allí) y debajo el desplegable del permiso de este panel.
+const COLUMNAS = [
+  { permiso: 'administracion', titulo: 'Panel', si: 'Entra' },
+  { permiso: 'horarios', titulo: 'Horarios', si: 'Administra' },
+  { permiso: 'banos', titulo: 'Control de baños', si: 'Administra' },
+  { permiso: 'calendario', titulo: 'Calendario', si: 'Administra' },
+  { permiso: 'reservas', titulo: 'Reservas', si: 'Administra' },
+  { permiso: 'pac', titulo: 'PAC', si: 'Coordina' },
+  { permiso: 'incidencias', titulo: 'Incidencias', roles: WEBS.find(w => w.permiso === 'incidencias').roles },
+  { permiso: 'orientacion_rol', titulo: 'Orientación', si: 'Edita todo (rol)' },
+  { permiso: 'todas', titulo: 'Todas las webs', si: 'Administra' },
+];
 let filtroQuien = { q: '', grupo: '', solo: false };
 
 function pintarPorPersona(permisos, reglas, tutorias) {
   const nivelDe = q => reglas.find(r => r.quien === q)?.nivel || 'nada';
   const NUM = { editar: 3, ver: 2, medidas: 1, nada: 0 };
-  const ETAPAS = { infantil: 'Infantil', primaria: 'Primaria', eso: 'ESO', bachillerato: 'Bachillerato', fp: 'Ciclos Formativos' };
-  const dadas = p => {  // capacidades que vienen de sus grupos o de su tutoría (solo lectura)
-    const g = p.grupos || [], c = [];
-    if (g.includes('equipo_directivo')) c.push('Panel de Administración (Equipo Directivo)');
-    if (g.some(x => ['eso', 'bachillerato'].includes(x))) c.push('Horarios: ver', 'Control de baños: registrar salidas');
-    if (g.includes('comision_pedagogica')) c.push('Calendario: administrar (Comisión Pedagógica)');
-    // Orientación: el nivel más alto de sus grupos para todas las fichas; si no, el de su etapa o su tutoría
-    const global = Math.max(0, ...g.map(k => NUM[nivelDe(k)] ?? 0));
-    if (global) c.push(`Orientación: ${global === 3 ? 'editar' : global === 2 ? 'ver' : 'ver medidas de'} todas las fichas`);
+  const VERBO = { 3: 'Edita', 2: 'Ve', 1: 'Ve medidas de' };
+  const ETAPAS = { infantil: 'Infantil', primaria: 'Primaria', eso: 'ESO', bachillerato: 'Bachillerato', fp: 'CCFF' };
+  const dadas = p => {  // lo que viene de sus grupos o de su tutoría, por columna (solo lectura)
+    const g = p.grupos || [], c = {};
+    const esoBach = g.some(x => ['eso', 'bachillerato'].includes(x));
+    if (g.includes('equipo_directivo')) c.administracion = ['Entra (Equipo Directivo)'];
+    if (esoBach) { c.horarios = ['Ve']; c.banos = ['Registra salidas']; }
+    if (g.includes('comision_pedagogica')) c.calendario = ['Administra (Comisión Pedagógica)'];
+    const o = [], global = Math.max(0, ...g.map(k => NUM[nivelDe(k)] ?? 0));
+    if (global) o.push(`${VERBO[global]} todas las fichas`);
     const etapa = NUM[nivelDe('etapa')];
-    if (etapa > global) g.filter(k => ETAPAS[k]).forEach(k => c.push(`Orientación: ${etapa === 3 ? 'editar' : etapa === 2 ? 'ver' : 'ver medidas de'} las fichas de ${ETAPAS[k]}`));
+    if (etapa > global) g.filter(k => ETAPAS[k]).forEach(k => o.push(`${VERBO[etapa]} ${ETAPAS[k]}`));
     const tutor = NUM[nivelDe('tutor')];
-    if (tutor > global) tutorias.filter(t => t.tutor_email === p.email).forEach(t => c.push(`Orientación: ${tutor === 3 ? 'editar' : 'ver'} las fichas de ${t.grupo} (tutoría)`));
+    if (tutor > global) tutorias.filter(t => t.tutor_email === p.email).forEach(t => o.push(`${VERBO[tutor]} ${t.grupo} (tutoría)`));
+    if (o.length) c.orientacion_rol = o;
     return c;
   };
   const q = filtroQuien.q.toLowerCase();
   const filas = personal.filter(p => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map(p => ({
-    p, propios: permisos.filter(x => x.email === p.email), dadas: dadas(p),
+    p, propios: Object.fromEntries(permisos.filter(x => x.email === p.email).map(x => [x.web, x.rol || 'admin'])), dadas: dadas(p),
   })).filter(({ p, propios }) =>
     (!q || (p.nombre + ' ' + p.email).toLowerCase().includes(q)) &&
     (!filtroQuien.grupo || (p.grupos || []).includes(filtroQuien.grupo)) &&
-    (!filtroQuien.solo || propios.length));
-  const opcionesAnadir = propios => '<option value="">Añadir permiso…</option>' + WEBS.filter(w => w.permiso && !propios.some(x => x.web === w.permiso))
-    .flatMap(w => w.roles ? Object.entries(w.roles).map(([r, n]) => `<option value="${w.permiso}:${r}">${esc(w.web)}: ${n}</option>`)
-      : [`<option value="${w.permiso}:admin">${esc(ETIQUETA_PERMISO[w.permiso])}</option>`]).join('');
-  const grupoOpc = $('#p-grupo')?.innerHTML || '';
+    (!filtroQuien.solo || Object.keys(propios).length));
+  const casilla = (col, p, propios, dadas) => {
+    const actual = propios[col.permiso];
+    const opciones = col.roles ? Object.entries(col.roles) : [['admin', col.si]];
+    return `<td class="${actual ? 'q-on' : ''}">${(dadas[col.permiso] || []).map(t => `<div class="q-dada">${esc(t)}</div>`).join('')}
+      <select data-celda data-web="${col.permiso}" data-email="${esc(p.email)}" title="Permiso de este panel">
+        <option value="">—</option>${opciones.map(([k, v]) => `<option value="${k}" ${actual && (col.roles ? k === actual : true) ? 'selected' : ''}>${esc(v)}</option>`).join('')}
+      </select></td>`;
+  };
 
   $('#q-lista').innerHTML = `<p class="adm-nota">Escuelas Salesianas María Auxiliadora · Nervión — situación a ${fecha(new Date())}.
-      <span class="chip" style="background:var(--borde);color:var(--texto)">Gris</span> viene de su grupo de Microsoft 365 o de su tutoría (se cambia allí).
-      <span class="chip">Azul</span> es un permiso de este panel: se puede quitar o cambiar. Todo el personal puede, además, reservar espacios y usar Distribución del aula.</p>
+      En <span class="q-dada" style="display:inline">gris</span>, lo que le viene de su grupo de Microsoft 365 o de su tutoría (se cambia allí).
+      El desplegable es el permiso de este panel: elige «—» para quitarlo. Las casillas con permiso salen en azul.
+      Todo el personal puede, además, reservar espacios y usar Distribución del aula.</p>
     <div class="adm-barra no-imprimir">
       <input type="search" id="qp-buscar" placeholder="Buscar persona…" value="${esc(filtroQuien.q)}">
-      <select id="qp-grupo">${grupoOpc}</select>
+      <select id="qp-grupo">${$('#p-grupo')?.innerHTML || ''}</select>
       <label><input type="checkbox" id="qp-solo" ${filtroQuien.solo ? 'checked' : ''}> Solo con permisos del panel</label>
       <span class="adm-nota" style="margin:0">${filas.length} personas</span>
     </div>
-    <div class="adm-tabla-env"><table class="adm"><thead><tr><th>Persona</th><th>Qué puede hacer</th></tr></thead><tbody>${
-      filas.map(({ p, propios, dadas }) => `<tr><td><b>${esc(p.nombre)}</b><br><span class="adm-nota">${esc(p.email)}</span></td>
-        <td>${dadas.map(t => `<span class="chip" style="background:var(--borde);color:var(--texto)">${esc(t)}</span>`).join('')}
-          ${propios.map(x => `<span class="chip q-perm">${esc(x.web === 'incidencias' ? 'Incidencias' : ETIQUETA_PERMISO[x.web] || x.web)}${x.web === 'incidencias'
-            ? ` <select data-rol data-web="incidencias" data-email="${esc(p.email)}">${Object.entries(ROLES_INC).map(([k, v]) => `<option value="${k}" ${k === x.rol ? 'selected' : ''}>${v}</option>`).join('')}</select>` : ''}
-            <button type="button" class="q-x" data-quitar data-web="${esc(x.web)}" data-email="${esc(p.email)}" title="Quitar este permiso" aria-label="Quitar">×</button></span>`).join('')}
-          ${!dadas.length && !propios.length ? '<span class="adm-nota">Solo lo común a todo el personal</span>' : ''}
-          <div class="no-imprimir" style="margin-top:4px"><select data-anadir-persona="${esc(p.email)}" style="width:auto">${opcionesAnadir(propios)}</select></div></td></tr>`).join('')}</tbody></table></div><p id="q-msg"></p>`;
+    <div class="adm-tabla-env q-matriz"><table class="adm"><thead><tr><th>Persona</th>${COLUMNAS.map(c => `<th>${esc(c.titulo)}</th>`).join('')}</tr></thead><tbody>${
+      filas.map(({ p, propios, dadas }) => `<tr><th scope="row">${esc(p.nombre)}</th>${COLUMNAS.map(c => casilla(c, p, propios, dadas)).join('')}</tr>`).join('')
+    }</tbody></table></div><p id="q-msg"></p>`;
   $('#qp-grupo').value = filtroQuien.grupo;
   const refiltrar = () => { filtroQuien = { q: $('#qp-buscar').value, grupo: $('#qp-grupo').value, solo: $('#qp-solo').checked }; pintarPorPersona(permisos, reglas, tutorias); $('#qp-buscar').focus(); $('#qp-buscar').setSelectionRange(99, 99); };
   $('#qp-buscar').oninput = refiltrar; $('#qp-grupo').onchange = refiltrar; $('#qp-solo').onchange = refiltrar;
 }
-async function anadirPermisoPersona(sel) {
-  if (!sel.value) return;
-  const [web, rol] = sel.value.split(':');
-  const { error } = await sb.rpc('panel_poner_permiso', { p_web: web, p_email: sel.dataset.anadirPersona, p_rol: rol });
-  if (error) return aviso($('#q-msg'), 'No se ha guardado: ' + error.message, false);
-  await cargarQuien(); aviso($('#q-msg'), 'Permiso añadido');
+async function cambiarCelda(sel) {
+  const { web, email } = sel.dataset;
+  const nombre = personal.find(x => x.email === email)?.nombre || email;
+  if (!sel.value && !confirm(`¿Quitar a ${nombre} este permiso?`)) return cargarQuien();
+  const { error } = sel.value
+    ? await sb.rpc('panel_poner_permiso', { p_web: web, p_email: email, p_rol: sel.value })
+    : await sb.rpc('panel_quitar_permiso', { p_web: web, p_email: email });
+  await cargarQuien();
+  aviso($('#q-msg'), error ? 'No se ha guardado: ' + error.message : 'Guardado', !error);
 }
 
 async function anadirPermiso(web) {
@@ -364,7 +378,7 @@ async function mostrar(p) {
   });
   $('#q-lista').addEventListener('change', e => {
     if (e.target.matches('select[data-rol]')) cambiarRol(e.target);
-    if (e.target.matches('select[data-anadir-persona]')) anadirPermisoPersona(e.target);
+    if (e.target.matches('select[data-celda]')) cambiarCelda(e.target);
     if (e.target.matches('select[data-quien]')) cambiarNivel(e.target, $('#q-msg'));
   });
 
