@@ -57,6 +57,19 @@
     .q-perm select { width: auto; min-width: 0; padding: 0 4px; font-size: .72rem; border-radius: 6px; }
     .q-x { border: 0; background: none; color: var(--azul); font-weight: 700; font-size: 1rem; line-height: 1; cursor: pointer; padding: 0 2px; }
     .q-x:hover { color: #c0392b; }
+    .q-matriz { max-height: 75vh; overflow: auto; }
+    .q-matriz table.adm th, .q-matriz table.adm td { border-right: 1px solid var(--borde); }
+    .q-matriz thead th { position: sticky; top: 0; background: var(--panel); z-index: 2; text-align: center; white-space: normal; min-width: 110px; }
+    .q-matriz tbody th { position: sticky; left: 0; background: var(--panel); z-index: 1; text-align: left; font-size: .88rem;
+      font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--texto); white-space: nowrap; border-bottom: 1px solid var(--borde); }
+    .q-matriz thead th:first-child { left: 0; z-index: 3; text-align: left; }
+    .q-matriz td { text-align: center; font-size: .78rem; min-width: 110px; vertical-align: middle; }
+    .q-matriz td:not(.q-on) select { border-color: transparent; background: transparent; color: var(--suave); }
+    .q-matriz td:not(.q-on):hover select, .q-matriz td select:focus { border-color: var(--borde); background: var(--bg); }
+    .q-matriz td.q-on { background: var(--azul-bg); }
+    .q-matriz td.q-on select { border-color: var(--azul); color: var(--azul); font-weight: 600; }
+    .q-matriz table.adm select { font-size: .78rem; padding: 2px 4px; min-width: 0; width: 100%; cursor: pointer; }
+    .q-dada { color: var(--suave); font-size: .74rem; line-height: 1.25; margin-bottom: 3px; }
     .login-caja { max-width: 460px; margin: 40px auto; text-align: center; }
     .btn-ms { display: inline-flex; align-items: center; gap: 10px; }
     .btn-ms svg { width: 18px; height: 18px; }
@@ -66,6 +79,8 @@
       .adm-caja { box-shadow: none; border: 0; padding: 0; }
       [data-panel]:not(.imprimir) { display: none !important; }
       .q-p button, .q-x { display: none; }
+      .q-matriz { max-height: none; overflow: visible; }
+      .q-matriz select { border: 0; appearance: none; background: none; padding: 0; text-align: center; }
     }
   </style>
 </head>
@@ -143,8 +158,8 @@
 
       <div class="adm-caja" data-panel="quien" hidden>
         <div class="adm-barra">
-          <button class="btn-s pri" type="button" data-modo="persona">Por persona</button>
-          <button class="btn-s" type="button" data-modo="web">Por web</button>
+          <button class="btn-s pri" type="button" data-modo="web">Por web</button>
+          <button class="btn-s" type="button" data-modo="persona">Por persona</button>
           <button class="btn-s" id="q-imprimir" type="button">Imprimir o guardar en PDF</button>
           <span class="adm-nota" style="margin:0">Se calcula en el momento con los permisos y grupos reales.</span>
         </div>
