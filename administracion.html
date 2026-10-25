@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administración · Utilidades del profesorado</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#009abb">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .adm-pest { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 20px; }
+    .adm-pest button { border: 1px solid var(--borde); background: var(--panel); color: var(--texto); border-radius: 999px;
+      padding: 8px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+    .adm-pest button[aria-selected="true"] { background: var(--azul); border-color: var(--azul); color: #fff; }
+    .adm-caja { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 18px; box-shadow: var(--sombra); }
+    .adm-nota { color: var(--suave); font-size: .9rem; margin: 0 0 14px; }
+    .adm-barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .adm-barra input[type="search"], .adm-barra select { font: inherit; padding: 7px 12px; border: 1px solid var(--borde);
+      border-radius: 999px; background: var(--bg); color: var(--texto); }
+    .adm-tabla-env { overflow-x: auto; }
+    table.adm { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    table.adm th { text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--suave);
+      padding: 8px 10px; border-bottom: 2px solid var(--borde); white-space: nowrap; }
+    table.adm td { padding: 8px 10px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+    table.adm tr.inactivo td, table.adm tr.historico td { opacity: .55; }
+    table.adm input, table.adm select { font: inherit; font-size: .88rem; width: 100%; min-width: 90px; padding: 5px 8px;
+      border: 1px solid var(--borde); border-radius: 8px; background: var(--bg); color: var(--texto); }
+    table.adm input[type="date"] { min-width: 130px; }
+    .chip { display: inline-block; font-size: .72rem; font-weight: 600; color: var(--azul); background: var(--azul-bg);
+      border-radius: 999px; padding: 2px 8px; margin: 0 4px 4px 0; white-space: nowrap; }
+    .nunca { color: var(--naranja); font-weight: 600; }
+    .btn-s { border: 1px solid var(--borde); background: var(--panel); color: var(--texto); border-radius: 999px; padding: 5px 12px;
+      font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-s.pri { background: var(--azul); border-color: var(--azul); color: #fff; }
+    .btn-s.peligro { color: #c0392b; }
+    .ok { color: var(--verde-oscuro); font-weight: 600; }
+    .err { color: #c0392b; font-weight: 600; }
+    .web-t { margin: 22px 0 6px; font-size: 1.05rem; }
+    .web-t:first-child { margin-top: 0; }
+    .q-web { border: 1px solid var(--borde); border-radius: 12px; margin-bottom: 10px; background: var(--bg); }
+    .q-web > summary { cursor: pointer; padding: 12px 16px; display: flex; gap: 10px; align-items: baseline; list-style: none; }
+    .q-web > summary::before { content: '▸'; color: var(--azul); }
+    .q-web[open] > summary::before { content: '▾'; }
+    .q-web > .adm-tabla-env { padding: 0 12px 12px; }
+    .q-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .q-p { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .q-p select { width: auto; min-width: 0; }
+    .q-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+    .q-add select { width: auto; }
+    .q-perm { display: inline-flex; align-items: center; gap: 4px; white-space: normal; }
+    .q-perm select { width: auto; min-width: 0; padding: 0 4px; font-size: .72rem; border-radius: 6px; }
+    .q-x { border: 0; background: none; color: var(--azul); font-weight: 700; font-size: 1rem; line-height: 1; cursor: pointer; padding: 0 2px; }
+    .q-x:hover { color: #c0392b; }
+    .q-matriz { max-height: 75vh; overflow: auto; }
+    .q-matriz table.adm th, .q-matriz table.adm td { border-right: 1px solid var(--borde); }
+    .q-matriz thead th { position: sticky; top: 0; background: var(--panel); z-index: 2; text-align: center; white-space: normal; min-width: 110px; }
+    .q-matriz tbody th { position: sticky; left: 0; background: var(--panel); z-index: 1; text-align: left; font-size: .88rem;
+      font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--texto); white-space: nowrap; border-bottom: 1px solid var(--borde); }
+    .q-matriz thead th:first-child { left: 0; z-index: 3; text-align: left; }
+    .q-matriz td { text-align: center; font-size: .78rem; min-width: 110px; vertical-align: middle; }
+    .q-matriz td:not(.q-on) select { border-color: transparent; background: transparent; color: var(--suave); }
+    .q-matriz td:not(.q-on):hover select, .q-matriz td select:focus { border-color: var(--borde); background: var(--bg); }
+    .q-matriz td.q-on { background: var(--azul-bg); }
+    .q-matriz td.q-on select { border-color: var(--azul); color: var(--azul); font-weight: 600; }
+    .q-matriz table.adm select { font-size: .78rem; padding: 2px 4px; min-width: 0; width: 100%; cursor: pointer; }
+    .q-dada { color: var(--suave); font-size: .74rem; line-height: 1.25; margin-bottom: 3px; }
+    .login-caja { max-width: 460px; margin: 40px auto; text-align: center; }
+    .btn-ms { display: inline-flex; align-items: center; gap: 10px; }
+    .btn-ms svg { width: 18px; height: 18px; }
+    .sesion-l { display: flex; gap: 10px; align-items: center; justify-content: flex-end; color: var(--suave); font-size: .88rem; margin-top: 10px; }
+    @media print {
+      .top, .adm-pest, .adm-barra, .sesion-l, .pie, .no-imprimir { display: none !important; }
+      .adm-caja { box-shadow: none; border: 0; padding: 0; }
+      [data-panel]:not(.imprimir) { display: none !important; }
+      .q-p button, .q-x { display: none; }
+      .q-matriz { max-height: none; overflow: visible; }
+      .q-matriz select { border: 0; appearance: none; background: none; padding: 0; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="marca" href="./"><img class="logo" src="logo.svg" alt="Salesianas Nervión"><span>Utilidades del profesorado</span></a>
+  </header>
+
+  <main>
+    <section class="portada" style="padding-bottom:0">
+      <span class="eyebrow">Equipo Directivo</span>
+      <h1>Administración</h1>
+      <div class="franjas" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="sesion-l" id="sesion" hidden><span id="usuario"></span><button class="btn-s" id="salir" type="button">Salir</button></div>
+    </section>
+
+    <section id="login" class="login-caja adm-caja" hidden>
+      <h2 style="margin-top:0">Iniciar sesión</h2>
+      <p class="adm-nota">Solo para el Equipo Directivo y las personas autorizadas. Entra con tu cuenta <strong>@salesianas.org</strong>.</p>
+      <button id="entrar" class="btn btn-ms" type="button">
+        <svg viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+        Entrar con Microsoft 365
+      </button>
+      <p class="err" id="login-msg"></p>
+    </section>
+
+    <section id="app" hidden>
+      <nav class="adm-pest" role="tablist">
+        <button type="button" role="tab" data-p="personal" aria-selected="true">Personal</button>
+        <button type="button" role="tab" data-p="cuentas">Cuentas compartidas</button>
+        <button type="button" role="tab" data-p="tutorias">Tutorías</button>
+        <button type="button" role="tab" data-p="orientacion">Orientación</button>
+        <button type="button" role="tab" data-p="quien">Quién puede hacer qué</button>
+      </nav>
+
+      <div class="adm-caja" data-panel="personal">
+        <p class="adm-nota">La lista se copia cada noche del grupo de Microsoft 365 del colegio: las altas y bajas se hacen en ese grupo, no aquí. Sirve para ver quién tiene acceso, a qué grupos pertenece y cuándo entró por última vez en las webs.</p>
+        <div class="adm-barra">
+          <input type="search" id="p-buscar" placeholder="Buscar nombre o correo…">
+          <select id="p-grupo"><option value="">Todos los grupos</option></select>
+          <select id="p-acceso">
+            <option value="">Todos</option>
+            <option value="nunca">Nunca han entrado</option>
+            <option value="30">Sin entrar desde hace 1 mes</option>
+            <option value="90">Sin entrar desde hace 3 meses</option>
+          </select>
+          <label><input type="checkbox" id="p-inactivos"> Ver también inactivos</label>
+          <span class="adm-nota" id="p-cuenta" style="margin:0"></span>
+        </div>
+        <div class="adm-tabla-env"><table class="adm" id="t-personal"></table></div>
+      </div>
+
+      <div class="adm-caja" data-panel="cuentas" hidden>
+        <p class="adm-nota">Quién usa cada cuenta compartida y desde cuándo. Cuando cambie la persona, pulsa «Cambio de persona»: se cierra la fila actual con la fecha de hoy y se abre otra (el historial no se borra). Recuerda cambiar la contraseña ese día.</p>
+        <div class="adm-barra">
+          <button class="btn-s pri" id="c-nueva" type="button">Añadir cuenta</button>
+          <label><input type="checkbox" id="c-historial"> Ver historial</label>
+          <button class="btn-s" id="c-csv" type="button">Descargar (Excel)</button>
+          <span id="c-msg"></span>
+        </div>
+        <div class="adm-tabla-env"><table class="adm" id="t-cuentas"></table></div>
+      </div>
+
+      <div class="adm-caja" data-panel="tutorias" hidden>
+        <p class="adm-nota">Tutor o tutora de cada grupo este curso. Al cambiarlo se actualiza en todas las webs (lista común de grupos, Orientación y Horarios).</p>
+        <div class="adm-tabla-env"><table class="adm" id="t-tutorias"></table></div>
+        <p id="t-msg"></p>
+      </div>
+
+      <div class="adm-caja" data-panel="orientacion" hidden>
+        <p class="adm-nota"><b>Editar:</b> ver y editar la ficha completa · <b>Ver:</b> ver la ficha completa (diagnóstico, historial, medidas) · <b>Medidas:</b> solo medidas y materias pendientes, sin diagnóstico · <b>Nada:</b> no ve fichas. Cada persona tiene el nivel más alto de los que le correspondan. Los cambios se aplican al momento.</p>
+        <div class="adm-tabla-env"><table class="adm" id="t-orientacion"></table></div>
+        <p id="o-msg"></p>
+      </div>
+
+      <div class="adm-caja" data-panel="quien" hidden>
+        <div class="adm-barra">
+          <button class="btn-s pri" type="button" data-modo="web">Por web</button>
+          <button class="btn-s" type="button" data-modo="persona">Por persona</button>
+          <button class="btn-s" id="q-imprimir" type="button">Imprimir o guardar en PDF</button>
+          <span class="adm-nota" style="margin:0">Se calcula en el momento con los permisos y grupos reales.</span>
+        </div>
+        <div id="q-lista"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">Escuelas Salesianas María Auxiliadora · Nervión (Sevilla)</footer>
+  <script type="module" src="administracion.js"></script>
+</body>
+</html>
