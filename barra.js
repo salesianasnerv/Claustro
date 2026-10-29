@@ -9,6 +9,8 @@
   pestaña aunque se cambie de página o se inicie sesión). Si se entra directamente, no sale.
   El título es lo que va antes de " | " en el <title> de la web; para poner otro,
   añade data-titulo="…" a la etiqueta <script>.
+
+  Además, dentro de una pestaña de Teams (que no deja imprimir) cambia los botones de imprimir: ver abajo.
 */
 (function () {
   const yo = document.currentScript;
@@ -74,4 +76,68 @@
 
   const poner = () => document.body.prepend(host);
   if (document.body) poner(); else document.addEventListener("DOMContentLoaded", poner);
+})();
+
+/*
+  IMPRIMIR DESDE TEAMS 
+  Dentro de una pestaña de Teams el navegador no deja abrir la ventana de imprimir.
+  Si la web está dentro de Teams, el botón «Imprimir» / «Guardar como PDF» enseña un aviso
+  con el botón «Abrir en el navegador», que abre la misma página fuera de Teams.
+*/
+(function () {
+  if (window === window.top) return;
+  const TEAMS = /(^|\.)teams\.(microsoft|live)\.com$|(^|\.)teams\.cloud\.microsoft$|(^|\.)cloud\.microsoft$/;
+  let padres = [];
+  try { padres = Array.from(location.ancestorOrigins || []); } catch {}
+  try { if (document.referrer) padres.push(new URL(document.referrer).origin); } catch {}
+  const enTeams = padres.some((o) => { try { return TEAMS.test(new URL(o).hostname); } catch { return false; } })
+    || new URLSearchParams(location.search).has("teams") || /\bTeams\//.test(navigator.userAgent);
+  if (!enTeams) return;
+
+  // La letra corporativa, por si la web no la ha cargado ya
+  function letra() {
+    if (document.querySelector('link[href*="family=Fira+Sans"]')) return;
+    const l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.href = "https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;600;700&display=swap";
+    document.head.appendChild(l);
+  }
+  if (document.head) letra(); else document.addEventListener("DOMContentLoaded", letra);
+
+  function aviso() {
+    if (document.getElementById("aviso-imprimir-teams")) return;
+    const url = new URL(location.href); url.searchParams.delete("teams");
+    const host = document.createElement("div");
+    host.id = "aviso-imprimir-teams";
+    const s = host.attachShadow({ mode: "open" });
+    s.innerHTML = `
+      <style>
+        :host { all: initial; position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center;
+          background: rgba(15, 23, 42, .45); font: 400 15px/1.45 "Fira Sans", system-ui, sans-serif; }
+        .caja { --panel: #fff; --texto: #1E293B; --suave: #64748B; --borde: #E2E8F0; --azul: #009abb;
+          position: relative; overflow: hidden; width: min(420px, calc(100vw - 32px)); padding: 22px 22px 26px;
+          border-radius: 14px; background: var(--panel); color: var(--texto); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+        @media (prefers-color-scheme: dark) { .caja { --panel: #17212C; --texto: #E7ECF2; --suave: #9AA8B6; --borde: #263340; --azul: #29b6d4; } }
+        .caja::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+          background: linear-gradient(90deg, #009abb 0 33.34%, #b4be00 33.34% 66.67%, #ee712a 66.67%); }
+        h2 { margin: 0 0 8px; font: 700 18px/1.3 "Fira Sans", system-ui, sans-serif; }
+        p { margin: 0 0 18px; color: var(--suave); }
+        .acc { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+        a, button { font: 600 14px/1 "Fira Sans", system-ui, sans-serif; padding: 10px 16px; border-radius: 999px; cursor: pointer; text-decoration: none; }
+        button { background: none; border: 1px solid var(--borde); color: inherit; }
+        a { background: var(--azul); border: 1px solid var(--azul); color: #fff; }
+      </style>
+      <div class="caja" role="dialog" aria-modal="true" aria-labelledby="t">
+        <h2 id="t">Para imprimir, abre la web en el navegador</h2>
+        <p>Teams no deja imprimir ni guardar en PDF desde sus pestañas. Pulsa «Abrir en el navegador», vuelve a pulsar el botón de imprimir allí y elige la impresora o «Guardar como PDF».</p>
+        <div class="acc"><button type="button">Cerrar</button><a href="${url.href}" target="_blank" rel="noopener">Abrir en el navegador</a></div>
+      </div>`;
+    const cerrar = () => host.remove();
+    s.querySelector("button").onclick = cerrar;
+    s.querySelector("a").addEventListener("click", () => setTimeout(cerrar, 300));
+    host.addEventListener("click", (e) => { if (e.target === host) cerrar(); });
+    document.body.appendChild(host);
+    s.querySelector("a").focus();
+  }
+  window.print = aviso;
 })();
