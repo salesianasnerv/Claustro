@@ -8,13 +8,14 @@
   Solo aparece si se ha llegado a la web desde el portal (y sigue apareciendo en esa
   pestaña aunque se cambie de página o se inicie sesión). Si se entra directamente, no sale.
   El título es lo que va antes de " | " en el <title> de la web; para poner otro,
-  añade data-titulo="…" a la etiqueta <script>.
+  añade data-titulo="…" a la etiqueta <script>. Con data-sin-barra no pone la barra
+  (solo el aviso de Teams); se usa en el panel y en las páginas de imprimir.
 
   Además, dentro de una pestaña de Teams (que no deja imprimir) cambia los botones de imprimir: ver abajo.
 */
 (function () {
   const yo = document.currentScript;
-  if (!yo || window !== window.top) return;
+  if (!yo || window !== window.top || yo.hasAttribute("data-sin-barra")) return;
   const PORTAL = new URL(yo.src).origin + "/";
   const CLAVE = "desde-portal";
 
